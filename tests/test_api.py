@@ -97,3 +97,16 @@ def test_variants_tokens_cube(client):
     assert sorted(x["name"] for x in st["decks"]) == ["Vint: Artifact", "Vint: Power", "Vint: other"]
     lotus = next(c for c in st["cards"] if c["key"] == "black lotus")
     assert lotus["need"] == 1 and len(lotus["batches"][0]["marks"]) == 2
+
+
+def test_deck_ids_never_reused(client):
+    a = client.post("/api/decks", json={"name": "A", "decklist": "1 Black Lotus"}).json()["id"]
+    b = client.post("/api/decks", json={"name": "B", "decklist": "1 Mox Pearl"}).json()["id"]
+    client.post("/api/mark", json={"items": [{"key": "mox pearl", "name": "Mox Pearl", "frm": [], "to": [b], "count": 1}]})
+    client.delete(f"/api/decks/{b}")
+    c = client.post("/api/decks", json={"name": "C", "decklist": "1 Mox Pearl"}).json()["id"]
+    assert c not in (a, b)
+    pearl = next(x for x in client.get("/api/state").json()["cards"] if x["key"] == "mox pearl")
+    # old B mark must be cleared and C painted, not silently inherited by C
+    assert not pearl["done"]
+    assert any(b in x["clear"] for x in pearl["actions"]) and any(c in x["add"] for x in pearl["actions"])

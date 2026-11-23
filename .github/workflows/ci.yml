@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt pytest
+      - name: Test
+        run: python -m pytest -q
+      - name: Front-end syntax check
+        run: node -e "new Function(require('fs').readFileSync('app/static/app.js','utf8'))"
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t edgemark:ci .
+      - name: Smoke test
+        run: |
+          docker run -d --name em -p 8080:8080 edgemark:ci
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/state && break; sleep 1; done
+          curl -fs http://127.0.0.1:8080/ | grep -q Edgemark
+          docker logs em
+          docker rm -f em

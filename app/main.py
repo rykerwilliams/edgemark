@@ -107,7 +107,8 @@ async def basic_auth(request: Request, call_next):
 def get_settings(con) -> dict:
     s = dict(DEFAULT_SETTINGS)
     for r in con.execute("SELECT key, value FROM settings"):
-        s[r["key"]] = json.loads(r["value"])
+        if r["key"] in DEFAULT_SETTINGS:
+            s[r["key"]] = json.loads(r["value"])
     return s
 
 
@@ -275,6 +276,15 @@ async def fetch_archidekt(ref: str) -> tuple[str, dict]:
     return did, logic.parse_archidekt(r.json())
 
 
+def _new_deck_id(con) -> int:
+    """Deck ids are never reused: painted marks reference them (see DESIGN.md D14)."""
+    row = con.execute("SELECT value FROM settings WHERE key='deck_seq'").fetchone()
+    seq = max(json.loads(row[0]) if row else 0,
+              con.execute("SELECT COALESCE(MAX(id),0) FROM decks").fetchone()[0])
+    con.execute("INSERT OR REPLACE INTO settings VALUES('deck_seq', ?)", (json.dumps(seq + 1),))
+    return seq + 1
+
+
 def _replace_cards(con, deck_id, cards, variant=None):
     """Replace a deck's list, or only one variant's list when variant is given."""
     if variant is None:
@@ -306,9 +316,9 @@ async def create_deck(body: DeckIn):
         pens = get_settings(con)["pens"]
         color = body.color or pens[(slot - 1) % len(pens)]
         cur = con.execute(
-            "INSERT INTO decks(name, format, pool, dedicated, active, include_side, slot, color, source, source_id, synced, notes)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-            (body.name or (parsed or {}).get("name") or "New deck", body.format or (parsed or {}).get("format", ""),
+            "INSERT INTO decks(id, name, format, pool, dedicated, active, include_side, slot, color, source, source_id, synced, notes)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (_new_deck_id(con), body.name or (parsed or {}).get("name") or "New deck", body.format or (parsed or {}).get("format", ""),
              body.pool or "Main", int(bool(body.dedicated)), 1, int(body.include_side is not False),
              slot, color, src, sid, time.time(), body.notes or ""))
         _replace_cards(con, cur.lastrowid, cards)
@@ -802,9 +812,9 @@ async def cube_import(body: CubeIn):
             color = s["pens"][(slot - 1) % len(s["pens"])]
             label = title if body.whole or title.startswith(f"{name}:") else f"{name}: {title}"
             cur = con.execute(
-                "INSERT INTO decks(name, format, pool, dedicated, active, include_side, slot, color, source, source_id, synced, notes)"
-                " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                (label, "Cube", pool, 0, 1, 1, slot, color, "cubecobra", cube.get("id", ""), time.time(), ""))
+                "INSERT INTO decks(id, name, format, pool, dedicated, active, include_side, slot, color, source, source_id, synced, notes)"
+                " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (_new_deck_id(con), label, "Cube", pool, 0, 1, 1, slot, color, "cubecobra", cube.get("id", ""), time.time(), ""))
             _replace_cards(con, cur.lastrowid, cards)
             created.append(cur.lastrowid)
         log(con, f"Cube import {name}: {len(created)} decks")

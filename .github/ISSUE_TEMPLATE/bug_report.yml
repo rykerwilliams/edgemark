@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in Edgemark is wrong (wrong marks, wrong counts, import failure, crash).
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Mark sleeves / work list
+        - Copy counts / pools
+        - Variants
+        - Tokens
+        - Archidekt import or sync
+        - CubeCobra import
+        - Paste / file import
+        - Collection / buy list
+        - Swaps
+        - Printed guide (3D print)
+        - Docker / hosting
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Decklist or data to reproduce
+      description: |
+        A minimal decklist, an Archidekt/CubeCobra link, or a trimmed backup
+        (Settings → Download backup). Remove anything private.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Image tag or commit (e.g. ghcr.io/rykerwilliams/edgemark:sha-abc1234)
+  - type: checkboxes
+    id: paint
+    attributes:
+      label: Painted sleeves affected?
+      options:
+        - label: This bug changed or would change marks I've already painted

@@ -1,0 +1,32 @@
+name: Feature or design change
+description: A new feature, or a change to one of the design decisions in docs/DESIGN.md.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you want to do?
+      description: The marking or collection problem you're trying to solve. Describe the need, not only a solution.
+    validations:
+      required: true
+  - type: input
+    id: decision
+    attributes:
+      label: Design decision affected
+      description: The DESIGN.md entry this touches, if any (e.g. "D2 slots", "D8 printings"), or "new".
+  - type: dropdown
+    id: compat
+    attributes:
+      label: Does it change how existing painted sleeves read?
+      description: Changes to slots, mark shapes or mark ids can invalidate paint that's already on sleeves.
+      options:
+        - "No, new behaviour only"
+        - "Yes, needs a migration / work list for existing sleeves"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed approach
+      description: Optional. Where it would go (see "To change" in DESIGN.md) and any trade-offs.

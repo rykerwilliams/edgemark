@@ -1,5 +1,7 @@
 # Edgemark
 
+[![CI](https://github.com/rykerwilliams/edgemark/actions/workflows/ci.yml/badge.svg)](https://github.com/rykerwilliams/edgemark/actions/workflows/ci.yml)
+
 A sleeve-marking planner for a whole Magic collection, in the spirit of PRISM
 but built for every format: Old School, Premodern, Vintage, cube, signed decks
 and Commander alike.
@@ -34,6 +36,14 @@ auth) and put it behind your usual TLS reverse proxy. On AWS, the same image run
 on ECS/Fargate, App Runner or a small EC2 box. Mount persistent storage
 (EBS/EFS) at `/data`.
 
+Or run the published image instead of building (the repo is private, so log in
+first with a GitHub token that has `read:packages`):
+
+```bash
+echo $GHCR_TOKEN | docker login ghcr.io -u <github-user> --password-stdin
+docker run -d -p 8080:8080 -v $PWD/data:/data ghcr.io/rykerwilliams/edgemark:latest
+```
+
 Without Docker:
 
 ```bash
@@ -63,6 +73,14 @@ EDGEMARK_DB=./edgemark.db uvicorn app.main:app --port 8080
 
 The Archidekt and CubeCobra APIs are public but undocumented. If a deck or cube
 won't import, paste its text or CSV export instead.
+
+## Docs
+
+* [docs/DESIGN.md](docs/DESIGN.md): every design decision, what it limits and
+  where to change it
+* [docs/FAQ.md](docs/FAQ.md): common questions
+* [CONTRIBUTING.md](CONTRIBUTING.md): dev setup and the rules that protect
+  painted sleeves
 
 ## API
 

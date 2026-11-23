@@ -270,11 +270,13 @@ built), **Open** (needs a decision).
   root, run with `--user` and a pre-owned volume (or an `fsGroup`). The
   entrypoint supports that path.
 
-### D19. Primary setup: a sibling service to Spellbook; solo still supported — Proposed
-* **Decision:** The first-class, primary setup is Edgemark next to a self-hosted
-  [Spellbook](https://github.com/KyleDerZweite/spellbook) instance, which
-  becomes its source of owned printings and decklists. Running Edgemark on its
-  own stays a supported setup. Edgemark runs as its own container
+### D19. Spellbook sibling service, alongside solo use — Proposed
+* **Decision:** Edgemark supports two first-class setups: solo, and as a
+  sibling service next to a self-hosted
+  [Spellbook](https://github.com/KyleDerZweite/spellbook) instance, which then
+  becomes its source of owned printings and decklists. The sibling setup is
+  the author's own, so it's the setup that gets tested most. As a sibling,
+  Edgemark runs as its own container
   next to Spellbook's containers in one Docker Compose stack and talks to it
   only over Spellbook's versioned HTTP API (`/api/v…/mtg/…`, its ADR-0028).
   Edgemark keeps its own SQLite file for marks, pools, painted state and the

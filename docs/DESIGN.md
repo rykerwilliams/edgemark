@@ -287,8 +287,10 @@ built), **Open** (needs a decision).
   Edgemark keeps its own SQLite file for marks, pools, painted state and the
   guide (D7, D13). Spellbook never depends on Edgemark. Solo, or when
   Spellbook can't be reached, Edgemark works as it does today, importing decks
-  from Archidekt and the other importers (D15). New features must keep working
-  solo, perhaps with less data, rather than requiring Spellbook.
+  from Archidekt and the other importers (D15). Solo mode is kept working but
+  not grown: card search, printings and deck editing come from Spellbook,
+  so new features may require the sibling setup rather than being rebuilt
+  solo.
 * **Why:** It closes D8's printing gap. Spellbook is an actively maintained, AGPL-3.0 (license-compatible),
   self-hosted inventory and deck builder whose backend is moving to Python. It
   already tracks owned printings and compares deck needs with inventory, which
@@ -297,6 +299,9 @@ built), **Open** (needs a decision).
   fork of Spellbook can stay identical to upstream, which keeps upstream
   updates painless.
 * **Alternatives:**
+  * Import Spellbook's Python core (`spellbook_core`) as a library. It would
+    tie Edgemark to Spellbook's Postgres schema and internals, which Spellbook
+    doesn't promise to keep stable. The HTTP API is the supported contract.
   * Merge Edgemark into a Spellbook fork. One app and one database, but every
     upstream change has to be merged by hand, and Spellbook changes quickly.
   * Contribute sleeve marking upstream as a Spellbook feature. Possible later

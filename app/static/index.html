@@ -53,6 +53,9 @@
   <div class="headrow"><div><h1>Decks</h1><p class="sub">Each deck owns one slot and one pen colour. Decks in the same pool share copies.</p></div>
     <button id="d-add">Add decks</button></div>
   <div id="d-list" class="decks"></div>
+  <h2>Pools</h2>
+  <p class="sub">Decks in a pool share copies, and slot numbers count separately in each pool. Turn on sideboard marks to paint sideboard copies on the right edge, level with the deck's left-edge slot. That leaves 30 deck slots in the pool.</p>
+  <div id="p-list" class="list"></div>
   <div class="headrow" style="margin-top:36px"><div><h2 style="margin:0">Tokens and extras</h2><p class="sub">Cards no decklist names (tokens, emblems, dungeons, helpers) that should still carry deck marks. A double-sided token gets the marks of every deck that needs either side.</p></div>
     <button id="t-add" class="ghost">Add token</button></div>
   <div id="t-list" class="list"></div>
@@ -79,6 +82,7 @@
   <form id="s-form" class="swapform">
     <label>Deck<select id="s-deck" required></select></label>
     <label id="s-var-l" hidden>Variant<select id="s-var"></select></label>
+    <label>Board<select id="s-board"><option value="main">Main deck</option><option value="side">Sideboard</option></select></label>
     <label>Card out<input id="s-out" list="s-out-list" placeholder="(none)"><datalist id="s-out-list"></datalist></label>
     <label>Card in<input id="s-in" list="all-cards" placeholder="(none)"></label>
     <label class="qty">Copies<input id="s-qty" type="number" min="1" value="1" inputmode="numeric"></label>
@@ -102,11 +106,13 @@
 <section id="v-settings" class="view">
   <h1>Settings</h1>
   <form id="st-form" class="settings">
-    <label>Starting corner for slot 1
-      <select id="st-corner"><option value="top-left">Top left (count rightward)</option><option value="top-right">Top right (count leftward)</option></select>
-      <small>Pick this before you paint anything. Changing it later moves every slot.</small></label>
-    <label>Slots per side<input id="st-spp" type="number" min="8" max="40" inputmode="numeric">
-      <small>24 matches the printed guide (2.6 mm pitch). Side B is the back face.</small></label>
+    <label>Slot 1 is nearest the
+      <select id="st-end"><option value="top">Top of the card</option><option value="bottom">Bottom of the card</option></select>
+      <small>Applies to both long edges. Pick this before you paint anything: changing it later moves every mark.</small></label>
+    <label>Slots per long edge<input id="st-spe" type="number" min="8" max="40" inputmode="numeric">
+      <small>30 matches the printed guide (2.6 mm apart). Left edge = slots 1–30, right edge = 31–60, unless a pool uses the right edge for sideboard marks.</small></label>
+    <label>Variant positions on the bottom edge<input id="st-nb" type="number" min="4" max="24" inputmode="numeric">
+      <small>20 matches the printed bottom plate.</small></label>
     <label class="chk"><input type="checkbox" id="st-basics"> Don't mark basic lands</label>
     <label>Locations (one per line)<textarea id="st-locs" rows="4"></textarea></label>
     <label>Pen colours<div id="st-pens" class="pens"></div><small>Click to edit. New decks take the next colour.</small></label>
@@ -123,18 +129,20 @@
 <!-- GUIDE -->
 <section id="v-guide" class="view prose">
   <h1>How Edgemark works</h1>
-  <p>Every deck gets a <b>slot</b> (a fixed position along the top edge of the inner sleeve) and a <b>pen colour</b>. A card's sleeve carries one mark for each deck that uses that copy, so you can fan a box and see which decks a card belongs to.</p>
+  <p>Every deck gets a <b>slot</b> (a fixed position along a long edge of the card face) and a <b>pen colour</b>. A card's sleeve carries one mark for each deck that uses that copy, so you can fan a stack and see which decks a card belongs to. Marks stay in the border: slots 1–30 on the left edge, 31–60 on the right edge, variant marks on the bottom edge. The top, with the name and mana cost, stays clear.</p>
   <h2>Pools</h2>
   <p>Decks in the same pool share copies because you never sleeve two of them at once, for example your Old School decks. Copy 1 carries the marks of every deck in the pool that runs the card, copy 2 the decks that run two or more, and so on. A pool therefore needs as many copies as its hungriest deck. Decks in different pools, or decks set to <b>dedicated</b> (signed decks, a cube, anything that stays built), get copies of their own.</p>
   <h2>Marking a card</h2>
   <ol>
     <li>Choose your starting corner and finish your lists before you paint.</li>
-    <li>Slide the Perfect Fit inner into the printed guide, card face up, top edge against the stop.</li>
-    <li>Paint each slot listed for the card through its window: the stripe at the very top edge, any variant dot in the lower half of the window. The long windows are slots 4, 8, 12, 16, 20 and 24, and the notch marks slot 1. For side B (slots 25 to 48), flip the sleeve and count the same way.</li>
+    <li>Slide the Perfect Fit inner into the printed guide, card face up, with the edge you're marking (L, R or B in the work list) against the stop. Use the plate labelled for that edge.</li>
+    <li>Paint each listed position through its window, right at the edge. Long windows mark every fifth position, and the big hole is position 1.</li>
     <li>Let it dry fully (touch-dry isn't sleeve-ready), outer-sleeve it, then tick it off here.</li>
   </ol>
+  <h2>Sideboards</h2>
+  <p>Turn on <b>sideboard marks</b> for a pool (Decks → Pools) and a deck's sideboard copies get their mark on the <b>right edge</b>, level with the deck's left-edge slot. A left mark means main deck, a right mark at the same height means sideboard, and a copy that's main in one deck and sideboard in another carries one of each. In that pool the right edge holds sideboard marks, so it has 30 deck slots.</p>
   <h2>Variants</h2>
-  <p>When one deck has several builds (say an Atog list with a Fling package and one without), split it into <b>variants</b> instead of spending more slots. The deck keeps one slot. A card that every variant plays gets just the stripe at the top of the window. A card only some variants play also gets a <b>dot</b> in the lower half of the same window, in that variant's colour. When you build a variant, pull cards with the bare stripe plus that variant's dot.</p>
+  <p>When one deck has several builds (say an Atog list with a Fling package and one without), split it into <b>variants</b> instead of spending more slots. The deck keeps its slot. A card that every variant plays gets just the deck's mark. A card only some variants play also gets each of those variants' marks on the <b>bottom edge</b>, at the variant's own position (B1, B2…). When you build a variant, pull cards with the deck's mark and no bottom mark, plus those with that variant's bottom mark.</p>
   <h2>Tokens and cubes</h2>
   <p>Tokens, emblems and other extras no decklist names go under <b>Decks → Tokens and extras</b>, with the decks that use them. A <b>CubeCobra</b> import turns each tag you tick into its own deck in one pool, so a card with two tags carries both marks and the cube needs just one copy of it.</p>
   <h2>Changing lists</h2>
@@ -201,10 +209,10 @@
     </div>
     <div id="e-vars">
       <h3>Variants</h3>
-      <small>Builds of this deck that share one slot. Cards in every variant get only the stripe; cards in some variants also get a dot in the lower half of the window, one colour per variant.</small>
+      <small>Builds of this deck that share its slot. Cards in every variant get only the deck's mark. Cards in some variants also get each of those variants' marks on the bottom edge (B1, B2…).</small>
       <div id="e-varlist" class="list"></div>
       <details id="e-varadd"><summary id="e-varsum">Split into variants</summary>
-        <div class="grid2"><label>New variant name<input id="ev-name" placeholder="e.g. Fling build"></label><label>Dot colour<input id="ev-color" type="color" value="#1e88e5"></label></div>
+        <div class="grid2"><label>New variant name<input id="ev-name" placeholder="e.g. Fling build"></label><label>Mark colour<input id="ev-color" type="color" value="#1e88e5"></label></div>
         <label>Archidekt link (optional)<input id="ev-arch" placeholder="https://archidekt.com/decks/…"></label>
         <label>Or paste its full list<textarea id="ev-list" rows="5"></textarea></label>
         <div class="row end"><button type="button" id="ev-go" class="ghost">Add variant</button></div>

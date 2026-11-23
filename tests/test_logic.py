@@ -2,7 +2,9 @@
 from app import logic
 from app.logic import Deck, desired_copies, diff_card, apply_action, parse_decklist, parse_archidekt
 
-F = frozenset
+def F(marks):
+    """Mark set from deck ids (ints -> main marks "dN") and/or mark strings."""
+    return frozenset(f"d{m}" if isinstance(m, int) else m for m in marks)
 
 
 def deck(i, cards, pool="Main", dedicated=False):
@@ -37,7 +39,7 @@ def test_basics_skipped():
 def test_fresh_marking_then_done():
     want = [F({1, 2}), F({1})]
     acts = diff_card([], want)
-    assert sorted((a["to"], a["count"]) for a in acts) == [([1], 1), ([1, 2], 1)]
+    assert sorted((a["to"], a["count"]) for a in acts) == [(["d1"], 1), (["d1", "d2"], 1)]
     phys = []
     for a in acts:
         phys = apply_action(phys, a["from"], a["to"], a["count"])
@@ -48,20 +50,20 @@ def test_swap_out_creates_clear_not_repaint():
     # Deck 2 drops its copy: sleeve {1,2} should just clear mark 2.
     phys = [F({1, 2}), F({1})]
     acts = diff_card(phys, [F({1}), F({1})])
-    assert acts == [{"from": [1, 2], "to": [1], "add": [], "clear": [2], "count": 1}]
+    assert acts == [{"from": ["d1", "d2"], "to": ["d1"], "add": [], "clear": ["d2"], "count": 1}]
 
 
 def test_extra_sleeve_cleared_entirely():
     acts = diff_card([F({3})], [])
-    assert acts == [{"from": [3], "to": [], "add": [], "clear": [3], "count": 1}]
-    assert apply_action([F({3})], [3], [], 1) == []
+    assert acts == [{"from": ["d3"], "to": [], "add": [], "clear": ["d3"], "count": 1}]
+    assert apply_action([F({3})], ["d3"], [], 1) == []
 
 
 def test_tier_shift_minimal_work():
     # Deck 3 adds 1 copy: best is adding mark 3 to the {1,2} sleeve.
     phys = [F({1, 2}), F({1})]
     acts = diff_card(phys, [F({1, 2, 3}), F({1})])
-    assert acts == [{"from": [1, 2], "to": [1, 2, 3], "add": [3], "clear": [], "count": 1}]
+    assert acts == [{"from": ["d1", "d2"], "to": ["d1", "d2", "d3"], "add": ["d3"], "clear": [], "count": 1}]
 
 
 def test_parse_plain_with_sideboard_and_sets():
@@ -152,7 +154,7 @@ def test_variant_marks():
     assert sorted(want["brainstorm"]["copies"], key=len) == [F({3}), F({3}), F({3, V(3, 1)}), F({3, V(3, 1)})]
     assert want["mana drain"]["copies"] == [F({3, V(3, 1)})] * 2
     assert want["fireball"]["copies"] == [F({3, V(3, 2)})]
-    assert logic.split_mark(V(3, 2)) == (3, 2) and logic.split_mark(7) == (7, 0)
+    assert logic.parse_mark(V(3, 2)) == (3, "var", 2) and logic.parse_mark("d7") == (7, "main", 0)
 
 
 def test_variants_share_pool_with_other_decks():
@@ -199,3 +201,46 @@ def test_cube_csv_and_tag_lists():
     assert names == {"Power": ["Black Lotus", "Time Walk"], "Blue": ["Brainstorm"], "rest": ["Filler"]}
     assert logic.cubecobra_id("https://cubecobra.com/cube/list/vintage-ish") == "vintage-ish"
     assert logic.cubecobra_id("https://cubecobra.com/cube/overview/abc123") == "abc123"
+
+
+
+# ---------------------------------------------------------------- sideboard marks
+
+def sbdeck(i, cards, pool="P", sb=True, variants=None):
+    d = deck(i, [] if variants else cards, pool=pool)
+    d.sideboard_marks = sb
+    if variants:
+        d.cards = [{"name": n, "qty": q, "board": b, "variant": v} for n, q, b, v in cards]
+        d.variants = [{"idx": v, "name": f"V{v}", "color": "#0f0"} for v in variants]
+    return d
+
+
+def test_sideboard_role_marks():
+    S = logic.sb_mark
+    a = sbdeck(1, [("Pyroblast", 1, "main"), ("Pyroblast", 2, "side")])
+    b = sbdeck(2, [("Pyroblast", 2, "side")])
+    got = desired_copies([a, b])["pyroblast"]["copies"]
+    # copy 1: A main, B side; copy 2: A side, B side; copy 3: A side
+    assert sorted(got, key=sorted) == sorted([F({1, S(2)}), F({S(1), S(2)}), F({S(1)})], key=sorted)
+
+
+def test_sideboard_marks_off_keeps_single_mark():
+    a = sbdeck(1, [("Pyroblast", 1, "main"), ("Pyroblast", 2, "side")], sb=False)
+    assert desired_copies([a])["pyroblast"]["copies"] == [F({1})] * 3
+
+
+def test_sideboard_ignored_when_deck_excludes_side():
+    a = sbdeck(1, [("Pyroblast", 1, "main"), ("Pyroblast", 2, "side")])
+    a.include_side = False
+    assert desired_copies([a])["pyroblast"]["copies"] == [F({1})]
+
+
+def test_variant_disagreeing_roles_get_both_marks():
+    S, V = logic.sb_mark, logic.variant_mark
+    d = sbdeck(3, [("Bolt", 1, "main", 1), ("Bolt", 1, "side", 2)], variants=[1, 2])
+    # both variants use one Bolt: main in V1, sideboard in V2 -> both marks, no dots
+    assert desired_copies([d])["bolt"]["copies"] == [F({3, S(3)})]
+
+
+def test_upgrade_old_integer_marks():
+    assert [logic.upgrade_mark(m) for m in (4, -1203, "d9.sb")] == ["d4", "d12.v3", "d9.sb"]

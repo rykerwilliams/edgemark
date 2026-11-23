@@ -57,11 +57,13 @@ CREATE TABLE IF NOT EXISTS deck_variants(
   deck_id INTEGER, idx INTEGER, name TEXT, color TEXT,
   source TEXT DEFAULT 'paste', source_id TEXT DEFAULT '', synced REAL,
   PRIMARY KEY(deck_id, idx));
+CREATE TABLE IF NOT EXISTS pools(
+  name TEXT PRIMARY KEY, sideboard_marks INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS tokens(
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, back TEXT DEFAULT '',
   qty INTEGER DEFAULT 1, deck_ids TEXT DEFAULT '[]', notes TEXT DEFAULT '');
 """
-TABLES = ("decks", "deck_cards", "deck_variants", "tokens", "cards", "swaps", "settings")
+TABLES = ("decks", "deck_cards", "deck_variants", "pools", "tokens", "cards", "swaps", "settings")
 
 
 def migrate(con):
@@ -71,10 +73,25 @@ def migrate(con):
     cols = {r[1] for r in con.execute("PRAGMA table_info(swaps)")}
     if "variant" not in cols:
         con.execute("ALTER TABLE swaps ADD COLUMN variant INTEGER DEFAULT 0")
+    if "board" not in cols:
+        con.execute("ALTER TABLE swaps ADD COLUMN board TEXT DEFAULT 'main'")
+    cols = {r[1] for r in con.execute("PRAGMA table_info(deck_variants)")}
+    if "pos" not in cols:
+        con.execute("ALTER TABLE deck_variants ADD COLUMN pos INTEGER")
+    # D14: integer mark ids -> text ids ("d12", "d12.v3")
+    for r in con.execute("SELECT key, physical FROM cards").fetchall():
+        phys = json.loads(r[1] or "[]")
+        if any(not isinstance(m, str) for sleeve in phys for m in sleeve):
+            con.execute("UPDATE cards SET physical=? WHERE key=?",
+                        (json.dumps([sorted(logic.upgrade_mark(m) for m in sleeve) for sleeve in phys]), r[0]))
+    con.execute("INSERT OR IGNORE INTO pools(name) SELECT DISTINCT COALESCE(pool,'Main') FROM decks")
+    for r in con.execute("SELECT deck_id, idx FROM deck_variants WHERE pos IS NULL").fetchall():
+        _assign_variant_pos(con, r[0], r[1])
 
 DEFAULT_SETTINGS = {
-    "start_corner": "top-left",  # where slot 1 sits on side A
-    "slots_per_side": 24,
+    "slot1_end": "top",       # slot 1 sits nearest the card's top (or "bottom")
+    "slots_per_edge": 30,     # slots along each long edge (left, right)
+    "bottom_positions": 20,   # variant mark positions along the bottom edge
     "skip_basics": True,
     "locations": ["Shared box", "Binder", "Bulk", "Out for signing"],
     "pens": ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00acc1", "#1e88e5",
@@ -139,14 +156,85 @@ def load_decks(con) -> list[logic.Deck]:
         for did in t["deck_ids"]:
             cards.setdefault(did, []).append({"name": t["full_name"], "qty": t["qty"], "board": "token", "variant": 0})
     variants = load_variants(con)
+    sb = {r["name"]: bool(r["sideboard_marks"]) for r in con.execute("SELECT * FROM pools")}
     return [
         logic.Deck(id=r["id"], name=r["name"], slot=r["slot"] or 0, color=r["color"],
                    pool=r["pool"] or "Main", dedicated=bool(r["dedicated"]),
                    active=bool(r["active"]), include_side=bool(r["include_side"]),
+                   sideboard_marks=sb.get(r["pool"] or "Main", False),
                    cards=cards.get(r["id"], []),
                    variants=[{"idx": v["idx"], "name": v["name"], "color": v["color"]} for v in variants.get(r["id"], [])])
         for r in con.execute("SELECT * FROM decks ORDER BY slot, id")
     ]
+
+
+def pool_capacity(con, pool: str) -> int:
+    """Deck slots in a pool: one long edge if the right edge holds sideboard marks."""
+    n = get_settings(con)["slots_per_edge"]
+    r = con.execute("SELECT sideboard_marks FROM pools WHERE name=?", (pool,)).fetchone()
+    return n if r and r[0] else 2 * n
+
+
+def ensure_pool(con, pool: str):
+    con.execute("INSERT OR IGNORE INTO pools(name) VALUES(?)", (pool,))
+
+
+def _slot_taken(con, pool, slot, exclude=None) -> bool:
+    return con.execute("SELECT 1 FROM decks WHERE COALESCE(pool,'Main')=? AND slot=? AND id<>?",
+                       (pool, slot, exclude or -1)).fetchone() is not None
+
+
+def _free_slot(con, pool: str) -> int:
+    ensure_pool(con, pool)
+    used = {r[0] for r in con.execute("SELECT slot FROM decks WHERE COALESCE(pool,'Main')=?", (pool,))}
+    for i in range(1, pool_capacity(con, pool) + 1):
+        if i not in used:
+            return i
+    raise HTTPException(400, f"All slots in pool '{pool}' are taken. Free one, use another pool, "
+                             "or turn off sideboard marks for this pool.")
+
+
+def _check_slot(con, pool, slot, exclude=None):
+    cap = pool_capacity(con, pool)
+    if not 1 <= slot <= cap:
+        raise HTTPException(400, f"Slot must be 1-{cap} in pool '{pool}'.")
+    if _slot_taken(con, pool, slot, exclude):
+        raise HTTPException(400, f"Slot {slot} is already used in pool '{pool}'.")
+
+
+def _assign_variant_pos(con, deck_id, idx):
+    """Give a variant the lowest free bottom-edge position in its deck's pool."""
+    pool = con.execute("SELECT COALESCE(pool,'Main') FROM decks WHERE id=?", (deck_id,)).fetchone()
+    pool = pool[0] if pool else "Main"
+    used = {r[0] for r in con.execute(
+        "SELECT v.pos FROM deck_variants v JOIN decks d ON d.id=v.deck_id "
+        "WHERE COALESCE(d.pool,'Main')=? AND v.pos IS NOT NULL AND NOT (v.deck_id=? AND v.idx=?)",
+        (pool, deck_id, idx))}
+    n = get_settings(con)["bottom_positions"]
+    pos = next((i for i in range(1, n + 1) if i not in used), None)
+    if pos is None:
+        raise HTTPException(400, f"No free variant positions left on the bottom edge in pool '{pool}'.")
+    con.execute("UPDATE deck_variants SET pos=? WHERE deck_id=? AND idx=?", (pos, deck_id, idx))
+    return pos
+
+
+def mark_labels(con):
+    """mark id -> physical position label (L5, R5, R5 SB, B3) for exports."""
+    n = get_settings(con)["slots_per_edge"]
+    decks = {r["id"]: r for r in con.execute("SELECT id, slot FROM decks")}
+    vpos = {(r["deck_id"], r["idx"]): r["pos"] for r in con.execute("SELECT deck_id, idx, pos FROM deck_variants")}
+
+    def label(m):
+        d, kind, v = logic.parse_mark(m)
+        slot = decks[d]["slot"] if d in decks else None
+        if slot is None:
+            return f"{m}(deleted)"
+        if kind == "var":
+            return f"B{vpos.get((d, v), '?')}"
+        if kind == "sb":
+            return f"R{slot}sb"
+        return f"L{slot}" if slot <= n else f"R{slot - n}"
+    return label
 
 
 def load_cards(con) -> dict[str, dict]:
@@ -223,8 +311,14 @@ def state():
         variants = load_variants(con)
         decks = [deck_json(con, d, variants) for d in con.execute("SELECT * FROM decks ORDER BY slot, id")]
         swaps = [dict(r) for r in con.execute("SELECT * FROM swaps ORDER BY id DESC LIMIT 200")]
+        pools = []
+        for r in con.execute("SELECT * FROM pools ORDER BY name"):
+            used = con.execute("SELECT COUNT(*) FROM decks WHERE COALESCE(pool,'Main')=?", (r["name"],)).fetchone()[0]
+            if used or r["sideboard_marks"]:
+                pools.append({"name": r["name"], "sideboard_marks": bool(r["sideboard_marks"]),
+                              "decks": used, "capacity": pool_capacity(con, r["name"])})
         return {"decks": decks, "cards": p["cards"], "settings": p["settings"], "swaps": swaps,
-                "tokens": load_tokens(con)}
+                "tokens": load_tokens(con), "pools": pools}
 
 
 class SettingsIn(BaseModel):
@@ -253,15 +347,6 @@ class DeckIn(BaseModel):
     decklist: str | None = None  # plain text; replaces the list when given
     archidekt: str | None = None  # URL or id; replaces the list when given
     variant: int | None = None  # which variant's list decklist/archidekt replaces
-
-
-def _free_slot(con) -> int:
-    s = get_settings(con)
-    used = {r[0] for r in con.execute("SELECT slot FROM decks WHERE slot IS NOT NULL")}
-    for i in range(1, 2 * s["slots_per_side"] + 1):
-        if i not in used:
-            return i
-    raise HTTPException(400, "All slots are taken; free one or raise slots per side in Settings.")
 
 
 async def fetch_archidekt(ref: str) -> tuple[str, dict]:
@@ -311,16 +396,17 @@ async def create_deck(body: DeckIn):
     if not cards:
         raise HTTPException(400, "No cards found in that list.")
     with _lock, db() as con:
-        slot = body.slot or _free_slot(con)
-        if con.execute("SELECT 1 FROM decks WHERE slot=?", (slot,)).fetchone():
-            raise HTTPException(400, f"Slot {slot} is already used.")
+        pool = (body.pool or "Main").strip() or "Main"
+        ensure_pool(con, pool)
+        slot = body.slot or _free_slot(con, pool)
+        _check_slot(con, pool, slot)
         pens = get_settings(con)["pens"]
         color = body.color or pens[(slot - 1) % len(pens)]
         cur = con.execute(
             "INSERT INTO decks(id, name, format, pool, dedicated, active, include_side, slot, color, source, source_id, synced, notes)"
             " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (_new_deck_id(con), body.name or (parsed or {}).get("name") or "New deck", body.format or (parsed or {}).get("format", ""),
-             body.pool or "Main", int(bool(body.dedicated)), 1, int(body.include_side is not False),
+             pool, int(bool(body.dedicated)), 1, int(body.include_side is not False),
              slot, color, src, sid, time.time(), body.notes or ""))
         _replace_cards(con, cur.lastrowid, cards)
         log(con, f"Added deck {cur.lastrowid} ({len(cards)} cards)")
@@ -340,10 +426,22 @@ async def update_deck(deck_id: int, body: DeckIn):
         split = _has_variants(con, deck_id)
         if split and (parsed or body.decklist is not None) and not body.variant:
             raise HTTPException(400, "This deck is split into variants: edit a variant's list instead.")
-        if "slot" in fields and con.execute("SELECT 1 FROM decks WHERE slot=? AND id<>?", (fields["slot"], deck_id)).fetchone():
-            raise HTTPException(400, f"Slot {fields['slot']} is already used.")
+        pool = (fields.get("pool") or d["pool"] or "Main").strip() or "Main"
+        if "pool" in fields:
+            fields["pool"] = pool
+            ensure_pool(con, pool)
+        moved = pool != (d["pool"] or "Main")
+        if "slot" in fields:
+            if fields["slot"] != d["slot"] or moved:
+                _check_slot(con, pool, fields["slot"], deck_id)
+        elif moved and (d["slot"] is None or _slot_taken(con, pool, d["slot"], deck_id)
+                        or d["slot"] > pool_capacity(con, pool)):
+            fields["slot"] = _free_slot(con, pool)
         for k, v in fields.items():
             con.execute(f"UPDATE decks SET {k}=? WHERE id=?", (int(v) if isinstance(v, bool) else v, deck_id))
+        if moved:
+            for r in con.execute("SELECT idx FROM deck_variants WHERE deck_id=?", (deck_id,)).fetchall():
+                _assign_variant_pos(con, deck_id, r[0])
         v = body.variant if split else None
         if parsed:
             _replace_cards(con, deck_id, parsed["cards"], v)
@@ -460,8 +558,8 @@ def update_card(key: str, body: CardIn):
 class ApplyIn(BaseModel):
     key: str
     name: str
-    frm: list[int]
-    to: list[int]
+    frm: list[str]
+    to: list[str]
     count: int
 
 
@@ -485,7 +583,7 @@ def mark(body: BulkIn):
 
 class UndoIn(BaseModel):
     key: str
-    physical: list[list[int]]
+    physical: list[list[str]]
 
 
 @app.post("/api/mark/set")
@@ -525,6 +623,7 @@ class SwapIn(BaseModel):
     in_name: str = ""
     qty: int = 1
     variant: int = 0  # for a split deck: which variant the swap changes
+    board: str = "main"  # main or side
 
 
 def _swap_decks(con, swaps: list[dict]) -> list[logic.Deck]:
@@ -538,18 +637,18 @@ def _swap_decks(con, swaps: list[dict]) -> list[logic.Deck]:
         if sw["out_name"]:
             left = sw["qty"]
             for c in cards:
-                if left and logic.norm(c["name"]) == logic.norm(sw["out_name"]) and c["board"] == "main" and c.get("variant", 0) == sw.get("variant", 0):
+                if left and logic.norm(c["name"]) == logic.norm(sw["out_name"]) and c["board"] == (sw.get("board") or "main") and c.get("variant", 0) == sw.get("variant", 0):
                     take = min(left, c["qty"])
                     c["qty"] -= take
                     left -= take
             cards = [c for c in cards if c["qty"] > 0]
         if sw["in_name"]:
             for c in cards:
-                if logic.norm(c["name"]) == logic.norm(sw["in_name"]) and c["board"] == "main" and c.get("variant", 0) == sw.get("variant", 0):
+                if logic.norm(c["name"]) == logic.norm(sw["in_name"]) and c["board"] == (sw.get("board") or "main") and c.get("variant", 0) == sw.get("variant", 0):
                     c["qty"] += sw["qty"]
                     break
             else:
-                cards.append({"name": sw["in_name"], "qty": sw["qty"], "board": "main", "variant": sw.get("variant", 0)})
+                cards.append({"name": sw["in_name"], "qty": sw["qty"], "board": sw.get("board") or "main", "variant": sw.get("variant", 0)})
         d.cards = cards
     return decks
 
@@ -575,8 +674,8 @@ def preview_swap(body: SwapIn):
 @app.post("/api/swaps")
 def queue_swap(body: SwapIn):
     with _lock, db() as con:
-        cur = con.execute("INSERT INTO swaps(deck_id, out_name, in_name, qty, variant, created) VALUES(?,?,?,?,?,?)",
-                          (body.deck_id, body.out_name, body.in_name, body.qty, body.variant, time.time()))
+        cur = con.execute("INSERT INTO swaps(deck_id, out_name, in_name, qty, variant, board, created) VALUES(?,?,?,?,?,?,?)",
+                          (body.deck_id, body.out_name, body.in_name, body.qty, body.variant, body.board, time.time()))
         return {"id": cur.lastrowid}
 
 
@@ -642,6 +741,7 @@ async def add_variant(deck_id: int, body: VariantIn):
             con.execute("UPDATE deck_cards SET variant=1 WHERE deck_id=?", (deck_id,))
             con.execute("INSERT INTO deck_variants(deck_id, idx, name, color, source, source_id, synced) VALUES(?,?,?,?,?,?,?)",
                         (deck_id, 1, "Base", _next_color(con, deck_id), d["source"], d["source_id"], d["synced"]))
+            _assign_variant_pos(con, deck_id, 1)
             rows = [(1,)]
         if len(rows) >= logic.MAX_VARIANTS:
             raise HTTPException(400, f"A deck can have at most {logic.MAX_VARIANTS} variants.")
@@ -651,6 +751,7 @@ async def add_variant(deck_id: int, body: VariantIn):
         con.execute("INSERT INTO deck_variants(deck_id, idx, name, color, source, source_id, synced) VALUES(?,?,?,?,?,?,?)",
                     (deck_id, idx, body.name or (parsed or {}).get("name") or f"Variant {idx}",
                      body.color or _next_color(con, deck_id), "archidekt" if parsed else "paste", sid, time.time()))
+        _assign_variant_pos(con, deck_id, idx)
         _replace_cards(con, deck_id, cards, idx)
         log(con, f"Deck {deck_id}: added variant {idx}")
         return {"idx": idx}
@@ -805,11 +906,13 @@ async def cube_import(body: CubeIn):
     created = []
     with _lock, db() as con:
         s = get_settings(con)
-        free = 2 * s["slots_per_side"] - con.execute("SELECT COUNT(*) FROM decks").fetchone()[0]
+        ensure_pool(con, pool)
+        free = pool_capacity(con, pool) - con.execute(
+            "SELECT COUNT(*) FROM decks WHERE COALESCE(pool,'Main')=?", (pool,)).fetchone()[0]
         if len(lists) > free:
-            raise HTTPException(400, f"That needs {len(lists)} slots but only {free} are free. Pick fewer tags.")
+            raise HTTPException(400, f"That needs {len(lists)} slots but pool '{pool}' has only {free} free. Pick fewer tags.")
         for title, cards in lists.items():
-            slot = _free_slot(con)
+            slot = _free_slot(con, pool)
             color = s["pens"][(slot - 1) % len(s["pens"])]
             label = title if body.whole or title.startswith(f"{name}:") else f"{name}: {title}"
             cur = con.execute(
@@ -832,6 +935,27 @@ def _count_names(cards):
     return {disp[k]: n for k, n in out.items()}
 
 
+class PoolIn(BaseModel):
+    sideboard_marks: bool
+
+
+@app.patch("/api/pools/{name}")
+def update_pool(name: str, body: PoolIn):
+    """Turn sideboard marks on or off for a pool (DESIGN.md D18)."""
+    with _lock, db() as con:
+        ensure_pool(con, name)
+        if body.sideboard_marks:
+            n = get_settings(con)["slots_per_edge"]
+            blocked = [r["name"] for r in con.execute(
+                "SELECT name FROM decks WHERE COALESCE(pool,'Main')=? AND slot>?", (name, n))]
+            if blocked:
+                raise HTTPException(400, "These decks use right-edge slots, which sideboard marks need: "
+                                    + ", ".join(blocked) + f". Move them to slots 1-{n} or another pool first.")
+        con.execute("UPDATE pools SET sideboard_marks=? WHERE name=?", (int(body.sideboard_marks), name))
+        log(con, f"Pool {name}: sideboard marks {'on' if body.sideboard_marks else 'off'}")
+    return {"ok": True}
+
+
 @app.get("/api/overlap")
 def overlap():
     with db() as con:
@@ -843,10 +967,10 @@ def overlap():
 def export_csv():
     with db() as con:
         p = plan(con)
-        decks = {d.id: d for d in load_decks(con)}
+        label = mark_labels(con)
     def tag(ids):
-        return " ".join(f"{decks[i].slot}" for i in ids if i in decks)
-    lines = ["Card,Need,Owned,Short,Location,Batches (slots x copies),Work left"]
+        return " ".join(label(m) for m in ids)
+    lines = ["Card,Need,Owned,Short,Location,Batches (marks x copies),Work left"]
     for c in p["cards"]:
         b = "; ".join(f"[{tag(x['marks'])}] x{x['count']}" for x in c["batches"])
         w = "; ".join(f"+[{tag(a['add'])}] -[{tag(a['clear'])}] x{a['count']}" for a in c["actions"])

@@ -19,7 +19,7 @@ edit and reload. The API is documented at `/docs` while the server runs.
 | `app/logic.py` | Pure logic, no I/O: decklist/cube parsing, copy planning (`desired_copies`), painted-vs-desired diff (`diff_card`), mark-id encoding. **Put new rules here and unit test them.** |
 | `app/main.py` | FastAPI routes, SQLite schema and migrations, Archidekt/CubeCobra fetching. |
 | `app/static/app.js` | UI: rendering, the sleeve-edge SVG (`sleeveSVG`), mark labels (`markInfo`). |
-| `guide/` | 3D-printable marking guide. `edgemark_guide.scad` is the source of truth; regenerate STLs with OpenSCAD. |
+| `guide/` | 3D-printable marking guides. `edgemark_guide.scad` is the source of truth; regenerate the five STLs with OpenSCAD (see `guide/README.md`). |
 | `docs/DESIGN.md` | Every design decision, its limits, and where to change it. |
 | `docs/FAQ.md` | User-facing answers, cross-referenced to DESIGN.md. |
 
@@ -29,10 +29,10 @@ People paint real sleeves based on what Edgemark says. A bug here costs paint
 and time, so:
 
 1. **Deck ids are never reused.** Create decks through `_new_deck_id()`.
-2. **Mark ids are stable.** Deck stripe = deck id, variant dot =
-   `-(deck_id*100 + idx)`. Changing the encoding needs a migration of
+2. **Mark ids are stable.** `d12` = deck 12's main mark, `d12.sb` = its
+   sideboard mark, `d12.v3` = its variant 3. Changing the encoding needs a migration of
    `cards.physical` (see DESIGN.md D14).
-3. **Slot and corner changes move marks.** Anything that changes where a mark
+3. **Slot and edge changes move marks.** Anything that changes where a mark
    sits must show up as clear-and-repaint work, never silently.
 4. **Schema changes go in `migrate()`** in `main.py` and must work on an
    existing database. Add a column with a default. Don't rebuild tables that hold

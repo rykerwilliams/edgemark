@@ -61,13 +61,18 @@ small{display:block;color:var(--mute);font-size:13px;margin-top:4px}
 .tag{font-size:13px;padding:1px 8px;border-radius:99px;background:var(--sleeve);color:var(--ink);white-space:nowrap}
 .tag.warn{background:color-mix(in srgb,var(--warn) 22%,transparent)}
 .tag.ok{background:color-mix(in srgb,var(--ok) 22%,transparent)}
-.act{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding-top:10px;margin-top:10px;border-top:1px dashed var(--line)}
+.act{display:grid;grid-template-columns:76px auto minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding-top:10px;margin-top:10px;border-top:1px dashed var(--line)}
 .act .n{font:700 22px/1 "Barlow Condensed",sans-serif;min-width:2.2em}
 .act .what{font-size:14px;color:var(--mute)}
 .act .what b{color:var(--ink)}
 .act button{min-width:84px}
-.edge{grid-column:1/-1}
-.sleeve{display:block;width:100%;max-width:560px;height:44px}
+.act>.edge{grid-column:1;grid-row:1}.act>.edge .sleeve{width:76px}.act>.n{grid-column:2;grid-row:1}.act>.what{grid-column:3;grid-row:1}.act>button,.act>span:last-of-type:empty{grid-column:4;grid-row:1}
+.sleeve{display:block;width:110px;height:auto;flex:none}
+.sleeve.big{width:min(260px,70vw)}
+.deckface{display:flex;gap:12px;align-items:center}.deckface .sleeve{width:90px}
+.poolmap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+@media(max-width:600px){.poolmap{grid-template-columns:1fr}}
 .batches{font-size:14px;color:var(--mute);margin-top:8px}
 .decks{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .deck{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;border-top:6px solid var(--c)}
@@ -116,7 +121,7 @@ dialog form{display:grid;gap:12px}
 .printout{display:none}
 @media(max-width:600px){
   .top{flex-direction:column;align-items:stretch;gap:6px}
-  .act{grid-template-columns:auto minmax(0,1fr)}.act button{grid-column:1/-1}
+  .act{grid-template-columns:64px auto minmax(0,1fr)}.act>.edge .sleeve{width:64px}.act>button{grid-column:2/-1;grid-row:2}
   table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}
   .stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}
   .stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;color:var(--mute)}

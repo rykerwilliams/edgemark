@@ -4,8 +4,9 @@ The reasoning behind each answer lives in [DESIGN.md](DESIGN.md) (decision
 numbers in brackets).
 
 **What do I mark: the card or the sleeve?**
-The Perfect Fit inner sleeve, on the card-face side, along the top edge. The
-card is never touched. Let the paint dry fully, then add the outer sleeve.
+The Perfect Fit inner sleeve, on the card-face side, in the border along the
+left, right or bottom edge. The top strip (name and mana cost) is never marked,
+and the card is never touched. Let the paint dry fully, then add the outer sleeve.
 [D1]
 
 **Do all my decks need the same outer sleeve?**
@@ -19,9 +20,10 @@ onto outer sleeves) and black (it barely shows on card backs). Test each pen on
 a spare sleeve first. [D3]
 
 **How many decks can I have?**
-48 slots per database (24 per side) by default. Split decks don't use extra
-slots: variants are dots under the deck's stripe, up to 8 per deck. Cube tags
-use one slot each. [D2, D4, D12]
+60 per pool (30 per long edge), or 30 if the pool uses sideboard marks, and
+slot numbers count separately in each pool. Split decks don't use extra slots:
+variants go on the bottom edge, up to 8 per deck. Cube tags use one slot each
+in the cube's own pool. [D2, D4, D12, D18]
 
 **What's a pool, and why isn't everything shared?**
 A pool is a group of decks you never sleeve at the same time, so they can share
@@ -63,15 +65,20 @@ corner before you paint. [D2, O2]
 Possibly. Marks on the card-face side of an inner sleeve add no thickness and
 can't be seen from the back, and players report judges allowing them for
 sideboard and cube marks. Whether cards count as marked is the head judge's
-call, and variant dots sit a little lower on the sleeve.
+call.
 Check with your head judge before sanctioned play. [O1]
 
 **Why self-hosted instead of a website?**
 So it can import from Archidekt and CubeCobra (browsers can't call those
 directly), so your data stays yours, and so anyone can change it. [D13]
 
-**Can I change how marks look (side-B variant stripes, different slot counts,
-per-pool slots)?**
+**Can I mark sideboard cards?**
+Yes. Turn on sideboard marks for the pool under Decks → Pools. Sideboard
+copies then get the deck's mark on the right edge, level with its left-edge
+slot, so you can pull the sideboard by fanning the deck. [D18]
+
+**Can I change how marks look (different slot counts, other edges, new mark
+kinds)?**
 Yes. That's what DESIGN.md is for. Each decision lists the files and
 functions to change. Open an issue first if it changes painted-data
 compatibility. [D2, D4, D14]

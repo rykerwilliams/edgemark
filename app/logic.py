@@ -3,7 +3,9 @@
 
 Model
 -----
-* A deck has a slot (1..N) and a colour. Its mark is that colour at that slot.
+* A deck has a slot and a colour. Slots are numbered per pool along the long
+  edges of the card face: 1..N on the left edge, N+1..2N on the right edge
+  (unless the pool uses the right edge for sideboard marks).
 * A deck belongs to a *pool*. Decks in the same pool share physical copies
   (you never sleeve two decks of one pool at the same time). Decks in
   different pools - or decks flagged ``dedicated`` - get their own copies.
@@ -250,19 +252,45 @@ def archidekt_deck_id(text: str) -> str | None:
 
 MAX_VARIANTS = 8
 
-
-def variant_mark(deck_id: int, idx: int) -> int:
-    """Mark id for variant `idx` (1..8) of a deck: a dot under the deck's stripe.
-
-    Deck marks are positive deck ids; variant dots are negative so both fit in
-    one sortable int set and old saved data stays valid.
-    """
-    return -(deck_id * 100 + idx)
+# ---- mark ids ---------------------------------------------------------------
+# A mark is a short string (see DESIGN.md D14):
+#   "d12"     deck 12's main-deck mark: its slot on the left (or right) long edge
+#   "d12.sb"  deck 12's sideboard mark: same height, right long edge
+#   "d12.v3"  variant 3 of deck 12: its own position on the bottom edge
+_MARK = re.compile(r"^d(\d+)(?:\.(sb|v(\d+)))?$")
 
 
-def split_mark(m: int) -> tuple[int, int]:
-    """-> (deck id, variant idx); idx 0 means the deck's own stripe."""
-    return (m, 0) if m > 0 else ((-m) // 100, (-m) % 100)
+def main_mark(deck_id: int) -> str:
+    return f"d{deck_id}"
+
+
+def sb_mark(deck_id: int) -> str:
+    return f"d{deck_id}.sb"
+
+
+def variant_mark(deck_id: int, idx: int) -> str:
+    return f"d{deck_id}.v{idx}"
+
+
+def parse_mark(m: str) -> tuple[int, str, int]:
+    """-> (deck id, kind, variant idx) with kind in main / sb / var."""
+    g = _MARK.match(m)
+    if not g:
+        raise ValueError(f"bad mark id {m!r}")
+    d = int(g.group(1))
+    if g.group(2) == "sb":
+        return d, "sb", 0
+    if g.group(3):
+        return d, "var", int(g.group(3))
+    return d, "main", 0
+
+
+def upgrade_mark(m) -> str:
+    """Old integer ids: deck id, or -(deck*100 + variant)."""
+    if isinstance(m, str):
+        return m
+    m = int(m)
+    return main_mark(m) if m > 0 else variant_mark((-m) // 100, (-m) % 100)
 
 
 @dataclass
@@ -275,15 +303,16 @@ class Deck:
     dedicated: bool = False
     active: bool = True
     include_side: bool = True
+    sideboard_marks: bool = False  # pool setting: sideboard copies get the right-edge mark
     cards: list[dict] = field(default_factory=list)  # {name, qty, board, variant?}
     variants: list[dict] = field(default_factory=list)  # [{idx, name, color}]
 
 
-def deck_needs(deck: Deck, skip_basics: bool) -> dict[str, tuple[str, dict[int, int]]]:
-    """norm name -> (display name, {variant idx: qty}) for one deck.
+def deck_needs(deck: Deck, skip_basics: bool) -> dict[str, tuple[str, dict[int, list[int]]]]:
+    """norm name -> (display name, {variant idx: [main qty, side qty]}).
 
     A deck without variants reports everything under variant 0. Token rows
-    (board "token") belong to the whole deck and count for every variant.
+    (board "token") count as main-deck cards for every variant.
     """
     need: dict[str, list] = {}
     tokens: dict[str, list] = {}
@@ -299,22 +328,26 @@ def deck_needs(deck: Deck, skip_basics: bool) -> dict[str, tuple[str, dict[int, 
             continue
         v = c.get("variant", 0) if deck.variants else 0
         ent = need.setdefault(k, [c["name"], {}])
-        ent[1][v] = ent[1].get(v, 0) + c["qty"]
+        ms = ent[1].setdefault(v, [0, 0])
+        ms[1 if c["board"] == "side" else 0] += c["qty"]
     idxs = [v["idx"] for v in deck.variants] or [0]
     for k, (disp, q) in tokens.items():
         ent = need.setdefault(k, [disp, {}])
         for v in idxs:
-            ent[1][v] = max(ent[1].get(v, 0), q)
+            ms = ent[1].setdefault(v, [0, 0])
+            ms[0] = max(ms[0], q)
     return {k: (v[0], v[1]) for k, v in need.items()}
 
 
 def desired_copies(decks: list[Deck], skip_basics: bool = True) -> dict[str, dict]:
     """norm name -> {name, copies: [frozenset(mark ids)], pools: {...}}.
 
-    Within a pool, copy i carries the stripe of every deck running >= i copies
-    (in any of its variants). For a split deck it also carries the dot of each
-    variant running >= i copies, unless every variant does (then the stripe
-    alone says it). Copies are ordered most-marks-first so output is stable.
+    Within a pool, copy i is used by every deck running >= i copies (main
+    copies count first, then sideboard copies). A deck marks a copy it uses
+    with its main mark, or, when its pool uses sideboard marks, with its main
+    mark if some variant plays copy i main and its sideboard mark if some
+    variant plays it from the sideboard. A split deck also adds the mark of
+    each variant using copy i, unless every variant does.
     """
     per_card: dict[str, dict] = {}
     by_id = {d.id: d for d in decks}
@@ -330,18 +363,23 @@ def desired_copies(decks: list[Deck], skip_basics: bool = True) -> dict[str, dic
         copies: list[frozenset] = []
         pools = {}
         for g, per_deck in ent["groups"].items():
-            top = max(max(vq.values()) for vq in per_deck.values())
+            top = max(m + s for vq in per_deck.values() for m, s in vq.values())
             for i in range(1, top + 1):
                 marks = set()
                 for did, vq in per_deck.items():
-                    if max(vq.values()) < i:
+                    using = [v for v, (m, s) in vq.items() if m + s >= i]
+                    if not using:
                         continue
-                    marks.add(did)
-                    variants = by_id[did].variants
-                    if variants:
-                        having = [v["idx"] for v in variants if vq.get(v["idx"], 0) >= i]
-                        if len(having) < len(variants):
-                            marks.update(variant_mark(did, x) for x in having)
+                    deck = by_id[did]
+                    if deck.sideboard_marks:
+                        if any(m >= i for m, s in vq.values()):
+                            marks.add(main_mark(did))
+                        if any(m < i <= m + s for m, s in vq.values()):
+                            marks.add(sb_mark(did))
+                    else:
+                        marks.add(main_mark(did))
+                    if deck.variants and len(using) < len(deck.variants):
+                        marks.update(variant_mark(did, v) for v in using)
                 copies.append(frozenset(marks))
             pools[g] = top
         copies.sort(key=lambda s: (-len(s), sorted(s)))
@@ -474,7 +512,7 @@ def diff_card(physical: list[frozenset], desired: list[frozenset]) -> list[dict]
     return actions
 
 
-def apply_action(physical: list[frozenset], frm: list[int], to: list[int], count: int) -> list[frozenset]:
+def apply_action(physical: list[frozenset], frm: list[str], to: list[str], count: int) -> list[frozenset]:
     """Record that `count` sleeves went from mark-set `frm` to `to`."""
     phys = list(physical)
     f, t = frozenset(frm), frozenset(to)
@@ -504,7 +542,8 @@ def batches(copies: list[frozenset]) -> list[dict]:
 def overlap_matrix(decks: list[Deck], skip_basics: bool = True) -> dict:
     """Count of distinct shared cards between every pair of active decks."""
     act = [d for d in decks if d.active]
-    sets = {d.id: {k for k, (_, vq) in deck_needs(d, skip_basics).items() if max(vq.values()) > 0} for d in act}
+    sets = {d.id: {k for k, (_, vq) in deck_needs(d, skip_basics).items()
+                   if any(m + sd for m, sd in vq.values())} for d in act}
     ids = [d.id for d in act]
     return {
         "decks": ids,

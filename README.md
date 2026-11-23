@@ -7,8 +7,9 @@
 A sleeve-marking planner for a whole Magic collection, built for every format:
 Old School, Premodern, Vintage, cube, signed decks and Commander alike.
 
-Each deck owns a **slot** on the top edge of the inner sleeve and a **pen
-colour**. A sleeve carries one mark per deck that uses that copy. Edgemark works
+Each deck owns a **slot** along a long edge of the card face and a **pen
+colour**. A sleeve carries one mark per deck that uses that copy, painted in the
+card's border so the name, cost and rules text stay clear. Edgemark works
 out how many copies you need, which marks go on which sleeves, what to clear
 when lists change, and what to buy.
 
@@ -40,10 +41,11 @@ a list changes.
 
 | Term | Meaning |
 |---|---|
-| Slot | Position 1–24 on side A (card face), 25–48 on side B (card back). Count from the starting corner set in Settings. |
+| Slot | A deck's position in its pool: 1–30 down the left long edge (`L1`–`L30`), 31–60 down the right edge (`R1`–`R30`). Slot 1 is nearest the card's top by default. |
 | Pool | Decks that never need to be sleeved at the same time share copies. Copy *n* carries the mark of every deck in the pool that runs at least *n* copies. |
+| Sideboard marks | Per-pool option: a deck's sideboard copies get its mark on the right edge, level with its left-edge slot (`R5 SB`). The pool then has 30 deck slots. |
 | Dedicated | The deck gets its own copies (signed decks, cubes, anything that stays built). |
-| Variant | One deck with several builds (up to 8) sharing its slot. Cards in every build get the stripe only; cards in some builds also get a coloured dot in the lower half of the window, one colour per build. |
+| Variant | One deck with several builds (up to 8) sharing its slot. Cards in every build get only the deck's mark; cards in some builds also get each of those builds' marks on the bottom edge (`B1`–`B20`). |
 | Token | A card no decklist names (token, emblem, dungeon) that should still carry deck marks. Double-sided tokens get the marks of every deck that needs either side. |
 | Work | The difference between what's painted and what the decklists need: paint these marks, clear those. |
 
@@ -120,8 +122,9 @@ pip install pytest && python -m pytest -q
 
 ## Printable marking guide
 
-`guide/` holds a two-part 3D-printable jig (base + window plate) with 24 windows
-at 2.6 mm pitch matching the app's slots. See `guide/README.md`.
+`guide/` holds two 3D-printable magnetic jigs: one for the long edges (LEFT and
+RIGHT plates, 30 windows each) and one for the bottom edge (20 windows), at
+2.6 mm pitch to match the app's slots. See `guide/README.md`.
 
 ## License
 

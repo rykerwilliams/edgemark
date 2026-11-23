@@ -26,31 +26,36 @@ built), **Open** (needs a decision).
 * **To change:** A `sleeve` attribute on pools (planned in D9) would let the app
   warn when decks in one pool use different outer sleeves.
 
-### D2. Slot = fixed position on the top edge; 24 per side, 48 total — Adopted
-* **Decision:** Each deck owns one slot. Slots 1–24 are on side A (card
-  face), 25–48 on side B (card back). Slot 1 is at the starting corner chosen in
-  Settings (top-left or top-right).
-* **Why:** 24 positions fit a 64 mm sleeve at a 2.6 mm pitch with a 1.5 mm
-  window, readable with a fine paint pen. Two sides give 48.
+### D2. Slots run down the long edges, numbered per pool — Adopted
+* **Decision:** Each deck owns one slot *within its pool*. Slots 1–30 run
+  down the **left long edge** of the card face, 31–60 down the **right long
+  edge** (or the right edge holds sideboard marks, see D18). Slot 1 is nearest
+  the card's top by default (Settings: "Slot 1 is nearest the …"). Marks are
+  about 3 mm deep, so they sit in the card's border. The top strip (name and
+  mana cost) is never marked.
+* **Why:** Marks on the top strip would cover the name and cost. The left edge
+  is what shows when you fan a hand or a stack, so main-deck marks are
+  readable exactly when you sort or de-sideboard. A long edge (89 mm) fits 30
+  slots at 2.6 mm, more than the short edge. Decks in different pools never
+  share a sleeve, so slot numbers can repeat across pools.
 * **Other approaches:** A single colour dot per deck (fine for a handful of
   decks), coloured stickers, or a different sleeve colour per shared card.
   Position-based slots scale further than colour alone.
 * **Limits:**
-  * Hard cap of `2 × slots_per_side` decks per database. A big cube import can
-    use up slots fast (one per tag).
-  * Slots are **global**, even though decks in different pools never share
-    a sleeve, so in principle they could reuse slots.
-  * Changing the starting corner or `slots_per_side` after painting
-    invalidates every painted mark. The app warns but can't migrate paint.
-* **To change:**
-  * `slots_per_side` is a setting. The printed guide's pitch is a parameter in
-    `guide/edgemark_guide.scad` and `make_guide.py`. Change both together.
-  * **Per-pool slot namespaces** (Proposed): let pools reuse slots, so you get
-    48 per pool instead of 48 in total. Needs: a `UNIQUE(pool, slot)` rule
-    instead of a global unique slot, the slot picker filtered by pool, and the
-    print legend grouped by pool. Risk: a card that moves between pools by
-    mistake would read as the wrong deck. Mitigate with a pool colour band
-    (see D4).
+  * 60 decks per pool (30 with sideboard marks on).
+  * Slot numbers repeat across pools, so a copy that strays into the wrong
+    pool's box reads as the wrong deck. Keep pools in separate boxes.
+  * Changing `slot1_end` or `slots_per_edge` after painting invalidates every
+    painted mark.
+* **To change:** `slots_per_edge` and `slot1_end` are settings. The printed
+  guide's `long_slots`, `pitch` and `SLOT1_AT_BOTTOM` in
+  `guide/edgemark_guide.scad` must match. A pool colour band (e.g. one mark on
+  the bottom edge per pool) would guard against strays.
+* **History:** v0 put 24 slots along the top edge and called the other 24
+  "side B" on the card back. Marks on the back of the inner sleeve are hidden
+  behind the card and the opaque outer sleeve, and the top strip covers the
+  name and cost, so both were dropped before anyone painted. Slots were also
+  global then (48 in total across all pools).
 
 ### D3. Colour is a pen colour and doesn't identify the deck — Adopted
 * **Decision:** Position (slot) identifies the deck. Colour is a second cue
@@ -64,42 +69,45 @@ built), **Open** (needs a decision).
 * **To change:** `settings.pens` holds the palette. A "colour-unique" mode could
   refuse duplicate colours when the palette allows it.
 
-### D4. Variant marks are dots under the stripe, in the same window — Adopted
-* **Decision:** A split deck keeps one slot. A card in **all** variants gets the
-  stripe only. A card in **some** variants also gets a dot per variant, in the
-  lower half of the same window, coloured by variant. Max 8 variants.
-* **Why:** Uses no extra slots, works with the 24-window guide as printed,
-  and reads at a glance: "stripe + yellow dot = Fling build."
-* **Alternatives considered:** A second stripe per variant on side B (clear
-  to read, but spends slots), or a dot beside the stripe rather than under it
-  (only fits about two variants).
-* **Limits:** Variant identity depends on dot colour alone, and the dot shares
-  window space with the stripe (needs a fine tip). No side-B stripe option.
-* **To change:** Mark shapes come from one place:
-  * Backend: `logic.variant_mark()` / `split_mark()`.
-  * Frontend: `markInfo()` and the `m.dot` branch of `sleeveSVG()`.
-  Adding a "stripe on side B" variant style means a per-deck `variant_style`
-  field and teaching `markInfo()` to return a side-B position. The planner
-  (`desired_copies`) doesn't care how a mark is drawn.
+### D4. Variant marks go on the bottom edge — Adopted
+* **Decision:** A split deck keeps its slot. A card in **all** variants gets
+  only the deck's mark. A card in **some** variants also gets the mark of each
+  variant using that copy, at the variant's own position on the **bottom
+  edge** (B1–B20), in the variant's colour. Positions are allocated per pool,
+  so two split decks sharing a copy never collide. Max 8 variants per deck.
+* **Why:** Uses no deck slots, keeps long-edge windows for deck marks, and
+  each bottom position means exactly one variant in its pool.
+* **Limits:** 20 variant positions per pool. Reading a variant needs the
+  legend (Slots tab or printed guide), since position B3 means different
+  things in different pools.
+* **To change:** `bottom_positions` (setting) and `bottom_slots` (SCAD).
+  Positions are assigned in `_assign_variant_pos()`; drawing is the `B` edge
+  in `sleeveSVG()`.
+* **History:** v0 drew variants as dots under the deck's stripe in the same
+  window. That shared window space with the stripe and doesn't work with
+  3 mm side-edge marks.
 
-### D5. The printed guide is a two-part magnetic jig — Adopted
-* **Decision:** A base with a sleeve pocket and top stop, plus a window plate
-  located by two pegs and held by optional 6×2 mm magnets. Long windows at
-  4/8/12/16/20/24, round markers at slots 1 and 13, engraved numbers.
-* **Why:** A jig makes every mark land in the same place on every sleeve,
-  and the magnetic hold lets you mark one-handed. The geometry is original and
-  fully parametric.
-* **Limits:** Sized for 64 mm Perfect Fit inners. One plate per starting corner.
+### D5. The printed guide: two magnetic jigs, one plate per edge — Adopted
+* **Decision:** A **long jig** (one base, a LEFT plate and a RIGHT plate with
+  30 windows each) and a **bottom jig** (base and BOTTOM plate with 20
+  windows). The sleeve lies face up with the edge being marked against the
+  stop. Plates are located by two pegs and held by optional 6×2 mm magnets.
+  Windows are 1.5 × 3 mm, open to the edge. Position 1 has a big index hole,
+  every fifth a small one, and the plates are engraved with numbers, the edge
+  name and an arrow to the card's top.
+* **Why:** A jig puts every mark in the same place on every sleeve, and the
+  magnetic hold lets you mark one-handed. Separate LEFT and RIGHT plates
+  count from opposite ends, so a sideboard mark lands exactly level with the
+  deck's main mark.
+* **Limits:** Sized for 64 × 89 mm Perfect Fit inners. The plates assume
+  `SLOT1_AT_BOTTOM = false`. Re-export them if you change that setting.
 * **To change:** All dimensions are parameters at the top of
   `guide/edgemark_guide.scad`.
-
----
-
-## 2. Sharing and copy planning
+* **History:** v0 was one plate with 24 windows along the top edge.
 
 ### D6. Pools: decks that are never sleeved at the same time share copies — Adopted
 * **Decision:** Every deck belongs to a named pool. Within a pool, copy *i* of
-  a card carries the stripe of every deck that runs at least *i* copies
+  a card carries the mark of every deck that runs at least *i* copies
   (quantity tiers). A pool needs `max(qty)` copies. A **dedicated** deck is a
   pool of one.
 * **Why:** Commander-focused setups usually assume one table, so every deck
@@ -168,9 +176,26 @@ built), **Open** (needs a decision).
 * **Decision:** Each ticked CubeCobra tag becomes a deck (with its own slot) in
   pool `Cube: <name>`, plus an optional "other" deck for untagged cards, or the
   whole cube as one deck.
-* **Limits:** Uses one slot per tag (see D2). No re-sync for cubes yet.
+* **Limits:** Uses one slot per tag. No re-sync for cubes yet.
 * **To change:** Store `source='cubecobra'` with the tag list, and add a sync
-  path like Archidekt's. Per-pool slots (D2) would remove the slot pressure.
+  path like Archidekt's. Each cube is its own pool, so it has its own 60
+  slots (D2).
+
+### D18. Sideboard marks: right edge, level with the deck's slot — Adopted
+* **Decision:** A per-pool setting. When it's on, a deck's sideboard copies
+  get its mark on the **right edge at the same height** as its left-edge
+  slot (`d12.sb`). A copy that's main in one deck and sideboard in another
+  carries one of each. Within a deck, main copies come first: with 1 main and
+  2 sideboard Pyroblasts, copy 1 is main and copies 2–3 are sideboard. For a
+  split deck whose variants disagree on a copy, it gets both marks.
+* **Why:** Players have long marked sideboard sleeves to reset decks between
+  games. "Sideboard" belongs to a deck's use of a copy, not to the copy, so
+  a single shared "SB" mark can't work once cards are shared.
+* **Limits:** A pool with sideboard marks has 30 deck slots (the right edge
+  is taken). Turning it on is refused while any deck in the pool uses a
+  right-edge slot.
+* **To change:** `pools.sideboard_marks`; planner logic in
+  `logic.desired_copies()`.
 
 ---
 
@@ -196,20 +221,20 @@ built), **Open** (needs a decision).
     and `ON CONFLICT` (both have Postgres equivalents). Wrap `db()` in a small
     adapter.
 
-### D14. Mark ids are integers: deck id, or −(deck × 100 + variant) — Adopted
-* **Decision:** A mark set is a `frozenset[int]`. Positive = deck stripe,
-  negative = variant dot.
-* **Why:** Keeps the old painted data valid when variants arrived, and keeps
-  sets sortable and JSON-friendly.
-* **Limits:** At most 99 variant indexes per deck (capped at 8 live).
-  Painted marks reference deck ids, so **a deck id must never be reused**.
-  SQLite would hand out the id of the most recently deleted deck again, so
-  `_new_deck_id()` keeps a counter that only goes up (`settings.deck_seq`). Any
-  new way of creating decks must use it.
-* **To change (Proposed):** If marks gain more kinds (side-B stripes, pool
-  bands, printing marks), switch to string mark ids like `d12`, `d12.v3`,
-  `p4`, with a one-time migration of `cards.physical`. Only
-  `variant_mark/split_mark` (Python) and `splitMark/markInfo` (JS) decode ids.
+### D14. Mark ids are short strings — Adopted
+* **Decision:** A painted sleeve is a set of mark ids: `d12` (deck 12's main
+  mark), `d12.sb` (its sideboard mark, D18) and `d12.v3` (its variant 3, D4).
+* **Why:** Marks come in three kinds now. Text ids stay readable in backups
+  and are easy to extend.
+* **Limits:** Painted marks reference deck ids, so **a deck id must never be
+  reused**. SQLite would hand out the id of the most recently deleted deck
+  again, so `_new_deck_id()` keeps a counter that only goes up
+  (`settings.deck_seq`). Any new way of creating decks must use it.
+* **To change:** Only `logic.parse_mark()` (Python) and `splitMark()` /
+  `markInfo()` (JS) decode ids. A new kind needs a new suffix there and a
+  position rule in `markInfo()`.
+* **History:** v0 used integers: deck id, or −(deck × 100 + variant).
+  `migrate()` converts old painted data with `logic.upgrade_mark()`.
 
 ### D15. Importers are small parse functions with tolerant parsing — Adopted
 * **Decision:** Each source is a `parse_*` function in `logic.py` (pure, unit
@@ -249,8 +274,8 @@ built), **Open** (needs a decision).
 * **O1. Tournament use.** Thin paint on the card-face side of an inner sleeve
   adds no thickness and isn't visible from the back. Players report judges
   accepting it for sideboard and cube marks, but it's the head judge's call
-  under the Magic Tournament Rules on marked cards. Our variant dots sit lower
-  on the sleeve and might be more visible. Before recommending Edgemark
+  under the Magic Tournament Rules on marked cards. Bottom-edge variant marks
+  and right-edge sideboard marks are the same kind of mark on the same face. Before recommending Edgemark
   for sanctioned play, test it with a judge.
 * **O2. Reordering slots.** Grouping slots by colour identity or putting
   most-played decks in the easiest-to-see slots is handy. Edgemark lets you

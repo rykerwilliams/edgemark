@@ -4,9 +4,8 @@
 [![License: AGPL v3](https://img.shields.io/badge/code-AGPL--3.0-blue.svg)](LICENSE)
 [![Guide: CC BY-SA 4.0](https://img.shields.io/badge/guide-CC%20BY--SA%204.0-lightgrey.svg)](guide/LICENSE)
 
-A sleeve-marking planner for a whole Magic collection, in the spirit of PRISM
-but built for every format: Old School, Premodern, Vintage, cube, signed decks
-and Commander alike.
+A sleeve-marking planner for a whole Magic collection, built for every format:
+Old School, Premodern, Vintage, cube, signed decks and Commander alike.
 
 Each deck owns a **slot** on the top edge of the inner sleeve and a **pen
 colour**. A sleeve carries one mark per deck that uses that copy. Edgemark works
@@ -109,5 +108,5 @@ Copyleft, so Edgemark and its improvements stay open:
 * **Printable guide** (`guide/`): [CC BY-SA 4.0](guide/LICENSE). Print, sell
   prints of, and remix it, with credit, under the same license.
 
-See [NOTICE](NOTICE) for attribution. Edgemark is fan-made, not affiliated with
-PRISM or Wizards of the Coast.
+See [NOTICE](NOTICE) for attribution. Edgemark is fan-made and not affiliated with
+Wizards of the Coast.

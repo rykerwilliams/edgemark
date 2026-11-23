@@ -1,7 +1,7 @@
 # Edgemark: notes for coding agents
 
 Read `CONTRIBUTING.md` (layout and the painted-sleeve rules) and
-`docs/DESIGN.md` (decisions D1–D18 and open questions O1–O4) before changing
+`docs/DESIGN.md` (decisions D1–D19 and open questions O1–O6) before changing
 behaviour.
 
 - Test: `python -m pytest -q`. New planning or parsing logic goes in

@@ -157,6 +157,11 @@ built), **Open** (needs a decision).
   collector number, or Scryfall id) to `deck_cards`, collection rows and painted
   sleeves, and widen the key to `(name, printing | *)`, where `*` means any.
   A deck that cares about a printing then gets only matching copies.
+  With Spellbook as a sibling (D19), printing identity comes for free:
+  Spellbook keys owned copies and deck entries by printing and finish, and
+  already separates exact from alternate printings. Edgemark can take the
+  printing from Spellbook instead of maintaining its own, and keep
+  name-only keys for solo use.
 
 ### D9. Basic lands are skipped by default — Adopted
 * **Why:** Every deck has them and nobody marks them. It's a setting
@@ -284,7 +289,7 @@ built), **Open** (needs a decision).
   Spellbook can't be reached, Edgemark works as it does today, importing decks
   from Archidekt and the other importers (D15). New features must keep working
   solo, perhaps with less data, rather than requiring Spellbook.
-* **Why:** Spellbook is an actively maintained, AGPL-3.0 (license-compatible),
+* **Why:** It closes D8's printing gap. Spellbook is an actively maintained, AGPL-3.0 (license-compatible),
   self-hosted inventory and deck builder whose backend is moving to Python. It
   already tracks owned printings and compares deck needs with inventory, which
   is the input Edgemark's planner needs. Spellbook has no plugin or extension
@@ -297,9 +302,10 @@ built), **Open** (needs a decision).
   * Contribute sleeve marking upstream as a Spellbook feature. Possible later
     if the maintainer wants it. It would need to follow Spellbook's
     architecture and review process.
-* **Limits:** Depends on Spellbook's API staying stable. The versioned API was
-  still in an unmerged pull request (PR 276) when this was written.
-  Automation needs a non-interactive login (O5).
+* **Limits:** Depends on Spellbook's API staying stable. Its versioned routes
+  are on Spellbook's main branch (`/api/v1/mtg/…`, including full deck and
+  deck-card editing, import, ownership and availability), but it's
+  pre-release. Automation needs a non-interactive login (O5).
 * **To change:** Add a Spellbook importer alongside the others (D15, ideally
   via the proposed `Importer` interface) and a `spellbook_url` setting. The
   stack layout goes in an example `docker-compose.spellbook.yml`.

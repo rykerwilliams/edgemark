@@ -171,3 +171,34 @@ def test_old_integer_marks_are_migrated(tmp_path, monkeypatch):
         con = sqlite3.connect(dbp)
         phys = json.loads(con.execute("SELECT physical FROM cards WHERE key='bolt'").fetchone()[0])
         assert phys == [["d1", "d2"], ["d1.v2"]]
+
+
+def test_add_builds_from_archidekt(client, monkeypatch):
+    import app.main as m
+    lists = {
+        "111": {"name": "UR Atog - Base", "format": "Custom", "cards": [
+            {"name": "Lightning Bolt", "qty": 4, "board": "main"}, {"name": "Brainstorm", "qty": 4, "board": "main"}]},
+        "222": {"name": "UR Atog - Fling", "format": "Custom", "cards": [
+            {"name": "Lightning Bolt", "qty": 4, "board": "main"}, {"name": "Fling", "qty": 4, "board": "main"}]},
+    }
+
+    async def fake_fetch(ref):
+        if ref not in lists:
+            raise m.HTTPException(404, "not found")
+        return ref, lists[ref]
+    monkeypatch.setattr(m, "fetch_archidekt", fake_fetch)
+    r = client.post("/api/decks/builds", json={"refs": ["111", "222"], "pool": "Old School"}).json()
+    assert r["name"] == "UR Atog" and r["builds"] == ["Base", "Fling"]
+    st = client.get("/api/state").json()
+    d = st["decks"][0]
+    assert d["name"] == "UR Atog" and [v["name"] for v in d["variants"]] == ["Base", "Fling"]
+    assert [v["source_id"] for v in d["variants"]] == ["111", "222"]
+    bolt = next(c for c in st["cards"] if c["key"] == "lightning bolt")
+    fling = next(c for c in st["cards"] if c["key"] == "fling")
+    assert bolt["batches"] == [{"marks": [M(d["id"])], "count": 4}]
+    assert fling["batches"] == [{"marks": sorted([M(d["id"]), f"d{d['id']}.v2"]), "count": 4}]
+    # a bad link creates nothing
+    assert client.post("/api/decks/builds", json={"refs": ["111", "999"]}).status_code == 404
+    assert len(client.get("/api/state").json()["decks"]) == 1
+    # needs at least two builds
+    assert client.post("/api/decks/builds", json={"refs": ["111"]}).status_code == 400

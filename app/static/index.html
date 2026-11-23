@@ -166,6 +166,8 @@
       <label>Deck links or ids (one per line)<textarea id="a-links" rows="4" placeholder="https://archidekt.com/decks/123456/my-deck"></textarea></label>
       <div class="row"><input id="a-user" placeholder="Archidekt username" aria-label="Archidekt username"><button type="button" id="a-find" class="ghost">List decks</button></div>
       <div id="a-userdecks" class="checks"></div>
+      <label class="chk"><input type="checkbox" id="a-builds"> These are builds of one deck</label>
+      <small id="a-builds-help">They become one deck with variants: it shares one slot, and only the cards that differ between builds get bottom-edge marks. Names like "UR Atog - Base" and "UR Atog - Fling" become deck "UR Atog" with builds "Base" and "Fling".</small>
     </div>
     <div data-pane="paste" hidden>
       <label>Deck name<input id="p-name"></label>

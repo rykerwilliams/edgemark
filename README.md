@@ -91,9 +91,11 @@ EDGEMARK_DB=./edgemark.db uvicorn app.main:app --port 8080
   becomes a deck in one pool, so a card with two tags carries both marks and
   the cube needs one copy. Untagged cards can get a catch-all deck, or you can
   import the whole cube as one deck.
-* **Variants**: in a deck's Edit dialog, **Split into variants** turns the
-  current list into "Base" and adds another build (from Archidekt or pasted).
-  Each variant syncs and swaps on its own.
+* **Variants**: if you keep builds of one deck as separate Archidekt decks,
+  paste all their links in **Add decks** and tick **These are builds of one
+  deck**. "UR Atog - Base" and "UR Atog - Fling" become deck "UR Atog" with
+  builds "Base" and "Fling". To add a build to an existing deck, use **Split
+  into variants** in its Edit dialog. Each build syncs and swaps on its own.
 * **Collection**: paste `4 Brainstorm` lines or a CSV with Quantity and Name
   columns (Archidekt, Deckbox and Moxfield exports all work) to set owned counts
   and a location.

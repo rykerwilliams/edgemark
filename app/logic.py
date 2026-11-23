@@ -387,6 +387,30 @@ def desired_copies(decks: list[Deck], skip_basics: bool = True) -> dict[str, dic
     return result
 
 
+def split_build_names(names: list[str]) -> tuple[str, list[str]]:
+    """Deck name and variant names from the names of several builds.
+
+    "UR Atog - Base" + "UR Atog - Fling" -> ("UR Atog", ["Base", "Fling"]).
+    The shared leading words become the deck name; with nothing shared, the
+    first name is the deck name and each build keeps its full name.
+    """
+    words = [n.split() for n in names]
+    common = []
+    for group in zip(*words):
+        if all(w.casefold() == group[0].casefold() for w in group):
+            common.append(group[0])
+        else:
+            break
+    while common and len(common) == min(len(w) for w in words):
+        common.pop()  # keep at least one word for every build
+    sep = " -–—:|/()[]"
+    deck = " ".join(common).strip(sep)
+    if len(deck) < 3:
+        return names[0], list(names)
+    rest = [" ".join(w[len(common):]).strip(sep) or n for w, n in zip(words, names)]
+    return deck, rest
+
+
 # --------------------------------------------------------------- cubes
 
 def parse_cubecobra(data: dict) -> dict:

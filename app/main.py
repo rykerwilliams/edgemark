@@ -413,6 +413,46 @@ async def create_deck(body: DeckIn):
         return {"id": cur.lastrowid}
 
 
+class BuildsIn(BaseModel):
+    refs: list[str]          # Archidekt links or ids, one per build
+    name: str | None = None  # deck name; derived from the build names if empty
+    pool: str | None = None
+    format: str | None = None
+    dedicated: bool = False
+
+
+@app.post("/api/decks/builds")
+async def create_builds(body: BuildsIn):
+    """Add several Archidekt decks as builds (variants) of one deck (DESIGN.md D4)."""
+    refs = list(dict.fromkeys(r.strip() for r in body.refs if r.strip()))
+    if not 2 <= len(refs) <= logic.MAX_VARIANTS:
+        raise HTTPException(400, f"Give 2-{logic.MAX_VARIANTS} Archidekt decks, one per build.")
+    fetched = [await fetch_archidekt(r) for r in refs]   # all or nothing: fetch before writing
+    for sid, parsed in fetched:
+        if not parsed["cards"]:
+            raise HTTPException(400, f"Archidekt deck {sid} has no cards.")
+    deck_name, build_names = logic.split_build_names([p["name"] for _, p in fetched])
+    with _lock, db() as con:
+        pool = (body.pool or "Main").strip() or "Main"
+        ensure_pool(con, pool)
+        slot = _free_slot(con, pool)
+        pens = get_settings(con)["pens"]
+        did = _new_deck_id(con)
+        first_sid, first = fetched[0]
+        con.execute(
+            "INSERT INTO decks(id, name, format, pool, dedicated, active, include_side, slot, color, source, source_id, synced, notes)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (did, body.name or deck_name, body.format or first.get("format", ""), pool, int(body.dedicated),
+             1, 1, slot, pens[(slot - 1) % len(pens)], "archidekt", first_sid, time.time(), ""))
+        for idx, ((sid, parsed), vname) in enumerate(zip(fetched, build_names), start=1):
+            con.execute("INSERT INTO deck_variants(deck_id, idx, name, color, source, source_id, synced) VALUES(?,?,?,?,?,?,?)",
+                        (did, idx, vname, _next_color(con, did), "archidekt", sid, time.time()))
+            _assign_variant_pos(con, did, idx)
+            _replace_cards(con, did, parsed["cards"], idx)
+        log(con, f"Added deck {did} with {len(fetched)} builds")
+        return {"id": did, "name": body.name or deck_name, "builds": build_names}
+
+
 @app.patch("/api/decks/{deck_id}")
 async def update_deck(deck_id: int, body: DeckIn):
     parsed = None

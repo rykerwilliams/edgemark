@@ -302,6 +302,14 @@ $("#a-go").addEventListener("click", async () => {
     } else if (addMode === "arch") {
       const refs = [...$("#a-links").value.split(/\s+/).filter(Boolean), ...$$("#a-userdecks input:checked").map(i => i.value)];
       if (!refs.length) throw new Error("Paste a deck link or pick decks from the list.");
+      if ($("#a-builds").checked) {
+        if (refs.length < 2) throw new Error("Builds need at least two Archidekt decks.");
+        btn.textContent = `Importing ${refs.length} builds…`;
+        const r = await api("/api/decks/builds", {method: "POST", body: {refs, pool: base.pool, format: base.format, dedicated: base.dedicated}});
+        $("#dlg-add").close(); toast(`Added ${r.name} with builds ${r.builds.join(", ")}`);
+        $("#a-links").value = ""; $("#a-userdecks").innerHTML = ""; $("#a-builds").checked = false;
+        btn.disabled = false; btn.textContent = "Add"; load(); return;
+      }
       let ok = 0, fails = [];
       for (const r of refs) { btn.textContent = `Importing ${ok + fails.length + 1}/${refs.length}`; try { await api("/api/decks", {method: "POST", body: {...base, archidekt: r}}); ok++; } catch (err) { fails.push(`${r}: ${err.message}`); } }
       if (fails.length) { $("#a-err").textContent = fails.join(" · "); } else $("#dlg-add").close();

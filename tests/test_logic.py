@@ -244,3 +244,12 @@ def test_variant_disagreeing_roles_get_both_marks():
 
 def test_upgrade_old_integer_marks():
     assert [logic.upgrade_mark(m) for m in (4, -1203, "d9.sb")] == ["d4", "d12.v3", "d9.sb"]
+
+
+def test_split_build_names():
+    sb = logic.split_build_names
+    assert sb(["UR Atog - Base", "UR Atog - Fling"]) == ("UR Atog", ["Base", "Fling"])
+    assert sb(["The Deck (Serra)", "The Deck (Mirror)"]) == ("The Deck", ["Serra", "Mirror"])
+    assert sb(["Sligh", "Burn"]) == ("Sligh", ["Sligh", "Burn"])
+    # one name is a prefix of the other: keep a word for each build
+    assert sb(["Atog Fling", "Atog"]) == ("Atog Fling", ["Atog Fling", "Atog"])

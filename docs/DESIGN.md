@@ -75,6 +75,9 @@ built), **Open** (needs a decision).
   variant using that copy, at the variant's own position on the **bottom
   edge** (B1–B20), in the variant's colour. Positions are allocated per pool,
   so two split decks sharing a copy never collide. Max 8 variants per deck.
+  Builds kept as separate Archidekt decks can be imported together as one
+  deck with variants (`POST /api/decks/builds`), with the deck and build names
+  taken from their shared name prefix (`logic.split_build_names()`).
 * **Why:** Uses no deck slots, keeps long-edge windows for deck marks, and
   each bottom position means exactly one variant in its pool.
 * **Limits:** 20 variant positions per pool. Reading a variant needs the

@@ -270,6 +270,41 @@ built), **Open** (needs a decision).
   root, run with `--user` and a pre-owned volume (or an `fsGroup`). The
   entrypoint supports that path.
 
+### D19. Primary setup: a sibling service to Spellbook; solo still supported — Proposed
+* **Decision:** The primary setup is Edgemark next to a self-hosted
+  [Spellbook](https://github.com/KyleDerZweite/spellbook) instance, which
+  becomes its source of owned printings and decklists. Running Edgemark on its
+  own stays a supported setup. Edgemark runs as its own container
+  next to Spellbook's containers in one Docker Compose stack and talks to it
+  only over Spellbook's versioned HTTP API (`/api/v…/mtg/…`, its ADR-0028).
+  Edgemark keeps its own SQLite file for marks, pools, painted state and the
+  guide (D7, D13). Spellbook never depends on Edgemark. Solo, or when
+  Spellbook can't be reached, Edgemark works as it does today, importing decks
+  from Archidekt and the other importers (D15). New features must keep working
+  solo, perhaps with less data, rather than requiring Spellbook.
+* **Why:** Spellbook is an actively maintained, AGPL-3.0 (license-compatible),
+  self-hosted inventory and deck builder whose backend is moving to Python. It
+  already tracks owned printings and compares deck needs with inventory, which
+  is the input Edgemark's planner needs. Spellbook has no plugin or extension
+  system, so a sibling service is the least invasive way to combine them. Our
+  fork of Spellbook can stay identical to upstream, which keeps upstream
+  updates painless.
+* **Alternatives:**
+  * Merge Edgemark into a Spellbook fork. One app and one database, but every
+    upstream change has to be merged by hand, and Spellbook changes quickly.
+  * Contribute sleeve marking upstream as a Spellbook feature. Possible later
+    if the maintainer wants it. It would need to follow Spellbook's
+    architecture and review process.
+* **Limits:** Depends on Spellbook's API staying stable. The versioned API was
+  still in an unmerged pull request (PR 276) when this was written.
+  Automation needs a non-interactive login (O5).
+* **To change:** Add a Spellbook importer alongside the others (D15, ideally
+  via the proposed `Importer` interface) and a `spellbook_url` setting. The
+  stack layout goes in an example `docker-compose.spellbook.yml`.
+* **Upstream candidates:** API tokens (O5), Archidekt import (already planned
+  in Spellbook's specification), and Old School and Middle School formats. Each
+  one accepted upstream is one less thing our fork carries.
+
 ---
 
 ## 4. Open questions
@@ -290,3 +325,13 @@ built), **Open** (needs a decision).
   table exists but isn't shown)?
 * **O4. Spare copies.** Sharing frees up duplicates that can be traded or
   sold. Edgemark's Collection tab knows `owned − need`. Add a "spares" view?
+* **O5. Logging in to Spellbook (D19).** Spellbook only has interactive
+  username and password logins, and no API tokens. A background service like
+  Edgemark, or a deck sync job, needs a token or service account. Propose API
+  tokens upstream, or keep a dedicated Spellbook account's session for
+  Edgemark?
+* **O6. Physical storage overlap (D19).** Spellbook has accepted physical boxes
+  that hold quantity allocations per box, tied to its card sorter (its
+  ADR-0030). That overlaps Edgemark's card locations and pools. Should
+  Edgemark read box contents from Spellbook instead of keeping its own, and
+  should pools map onto Spellbook's physical boxes?

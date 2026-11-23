@@ -1,6 +1,8 @@
 # Edgemark
 
 [![CI](https://github.com/rykerwilliams/edgemark/actions/workflows/ci.yml/badge.svg)](https://github.com/rykerwilliams/edgemark/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/code-AGPL--3.0-blue.svg)](LICENSE)
+[![Guide: CC BY-SA 4.0](https://img.shields.io/badge/guide-CC%20BY--SA%204.0-lightgrey.svg)](guide/LICENSE)
 
 A sleeve-marking planner for a whole Magic collection, in the spirit of PRISM
 but built for every format: Old School, Premodern, Vintage, cube, signed decks
@@ -36,11 +38,9 @@ auth) and put it behind your usual TLS reverse proxy. On AWS, the same image run
 on ECS/Fargate, App Runner or a small EC2 box. Mount persistent storage
 (EBS/EFS) at `/data`.
 
-Or run the published image instead of building (the repo is private, so log in
-first with a GitHub token that has `read:packages`):
+Or run the published image instead of building:
 
 ```bash
-echo $GHCR_TOKEN | docker login ghcr.io -u <github-user> --password-stdin
 docker run -d -p 8080:8080 -v $PWD/data:/data ghcr.io/rykerwilliams/edgemark:latest
 ```
 
@@ -97,3 +97,15 @@ pip install pytest && python -m pytest -q
 
 `guide/` holds a two-part 3D-printable jig (base + window plate) with 24 windows
 at 2.6 mm pitch matching the app's slots. See `guide/README.md`.
+
+## License
+
+Copyleft, so Edgemark and its improvements stay open:
+
+* **Code**: [GNU AGPL-3.0-or-later](LICENSE). Use it, change it and share it.
+  If you run a modified version for other people, offer them your source.
+* **Printable guide** (`guide/`): [CC BY-SA 4.0](guide/LICENSE). Print, sell
+  prints of, and remix it, with credit, under the same license.
+
+See [NOTICE](NOTICE) for attribution. Edgemark is fan-made, not affiliated with
+PRISM or Wizards of the Coast.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// Edgemark marking guide (https://github.com/rykerwilliams/edgemark)
 // Edgemark marking guide: base + window plate. Same geometry as make_guide.py,
 // plus engraved slot numbers on the plate. All sizes in mm.
 // Render one part at a time: set PART to "base" or "plate", then F6 and export STL.

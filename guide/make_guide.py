@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-SA-4.0
 """Generate the Edgemark marking guide STLs (base + window plate).
 
 Usage: python make_guide.py [out_dir]

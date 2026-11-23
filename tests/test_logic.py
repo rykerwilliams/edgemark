@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 from app import logic
 from app.logic import Deck, desired_copies, diff_card, apply_action, parse_decklist, parse_archidekt
 

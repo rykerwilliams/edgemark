@@ -1,5 +1,8 @@
 # Edgemark marking guide (3D print)
 
+Licensed [CC BY-SA 4.0](LICENSE). Credit "Edgemark marking guide by
+rykerwilliams" with a link to the repo, and share remixes under the same license.
+
 A two-part jig that puts every mark in the same place on every sleeve. Its 24
 windows at 2.6 mm pitch match Edgemark's slots 1–24 (side A). For slots 25–48
 (side B), flip the sleeve over and use the same window, slot 25 = window 1.

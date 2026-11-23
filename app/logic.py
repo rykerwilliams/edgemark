@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Pure logic for Edgemark: decklist parsing, mark planning and diffing.
 
 Model

@@ -13,5 +13,7 @@ behaviour.
   commit.
 - UI values from users or imports are untrusted. Pass them through `esc()`
   before they go into HTML.
+- Licensing: code is AGPL-3.0-or-later, `guide/` is CC-BY-SA-4.0. New files
+  start with the matching SPDX line. Keep the source link in the Guide tab.
 - Regenerate guide STLs from `guide/edgemark_guide.scad` with OpenSCAD, not by
   hand.

@@ -53,5 +53,8 @@ the release notes.
 
 ## License
 
-None yet: the repository is private and all rights are reserved by the
-owner. Pick a license before making it public.
+Contributions are accepted under the same licenses as the files they change
+("inbound = outbound"): AGPL-3.0-or-later for code and docs, CC BY-SA 4.0 for
+`guide/`. Opening a pull request means you agree to that, and that you have the
+right to contribute the work. New source files start with an SPDX line, e.g.
+`# SPDX-License-Identifier: AGPL-3.0-or-later`.

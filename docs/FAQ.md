@@ -1,8 +1,7 @@
 # Edgemark FAQ
 
-Some answers follow [PRISM's FAQ](https://prismmtg.com) where the two systems
-agree. Where Edgemark differs, the reasoning lives in [DESIGN.md](DESIGN.md)
-(decision numbers in brackets).
+The reasoning behind each answer lives in [DESIGN.md](DESIGN.md) (decision
+numbers in brackets).
 
 **What do I mark: the card or the sleeve?**
 The Perfect Fit inner sleeve, on the card-face side, along the top edge. The
@@ -24,7 +23,7 @@ a spare sleeve first. [D3]
 slots: variants are dots under the deck's stripe, up to 8 per deck. Cube tags
 use one slot each. [D2, D4, D12]
 
-**What's a pool, and why isn't everything shared like in PRISM?**
+**What's a pool, and why isn't everything shared?**
 A pool is a group of decks you never sleeve at the same time, so they can share
 copies. Edgemark covers a whole collection, so you might bring two Old School
 decks to the same event, keep signed decks intact, or keep a cube built. Put
@@ -61,8 +60,10 @@ to clear and the new one to paint on every sleeve. Pick your layout and starting
 corner before you paint. [D2, O2]
 
 **Is it tournament legal?**
-Possibly. PRISM cites Magic Tournament Rules 3.12 for its edge marks. Edgemark's
-stripes are the same idea, but variant dots sit a little lower on the sleeve.
+Possibly. Marks on the card-face side of an inner sleeve add no thickness and
+can't be seen from the back, and players report judges allowing them for
+sideboard and cube marks. Whether cards count as marked is the head judge's
+call, and variant dots sit a little lower on the sleeve.
 Check with your head judge before sanctioned play. [O1]
 
 **Why self-hosted instead of a website?**

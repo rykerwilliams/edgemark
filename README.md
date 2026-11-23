@@ -12,6 +12,30 @@ colour**. A sleeve carries one mark per deck that uses that copy. Edgemark works
 out how many copies you need, which marks go on which sleeves, what to clear
 when lists change, and what to buy.
 
+## Background
+
+Marking sleeves so one copy of a card can serve several decks isn't new. Players
+have done it by hand for well over a decade:
+
+* Commander players on MTG Salvation traded tips for it: sleeve every deck the
+  same, then mark shared cards with a coloured sharpie dot, or with little
+  coloured stickers showing which deck each card belongs to.
+  ([Sharing cards among commander decks](https://www.mtgsalvation.com/forums/the-game/commander-edh/600936-sharing-cards-among-commander-decks))
+* A cube owner on the same forum marked the sleeves of cards shared between
+  cubes, so switching meant pulling every marked card into a stack.
+  ([Best way to share cards between decks?](https://www.mtgsalvation.com/forums/the-game/commander-edh/545349-best-way-to-share-cards-between-decks))
+* Players have long put a small dot on the card-face side of sideboard sleeves
+  to find those cards fast between games.
+  ([TappedOut: Can I mark my sleeves?](https://tappedout.net/mtg-questions/can-i-mark-my-sleeves))
+* A related approach keeps shared staples in a binder, all decks in the same
+  sleeves, with placeholders in each deck.
+  ([The Mana Base](https://themanabase.com/?p=1293),
+  [the "Staples Binder Method"](https://github.com/cognicraft/mtg#the-staples-binder-method))
+
+Edgemark does the bookkeeping those methods leave to you: which decks each copy
+belongs to, how many copies each pool needs, and exactly which marks change when
+a list changes.
+
 ## Concepts
 
 | Term | Meaning |

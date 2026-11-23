@@ -1,9 +1,10 @@
 # Edgemark design decisions
 
-Edgemark started as a whole-collection take on [PRISM](https://prismmtg.com),
-a sleeve-marking system built for Commander. This file records each design
-choice: what we decided, why, what PRISM does, what the choice limits, and
-where in the code to change it. Treat it as a decision log. When a decision
+Marking sleeves so one copy of a card can serve several decks is an old player
+trick (see [Background](../README.md#background)). Most setups people describe
+are built around Commander. Edgemark aims to cover a whole collection across
+formats. This file records each design choice: what we decided, why, what
+other approaches do, what the choice limits, and where in the code to change it. Treat it as a decision log. When a decision
 changes, update its entry (keep the old reasoning under "History") rather than
 deleting it.
 
@@ -17,8 +18,8 @@ built), **Open** (needs a decision).
 ### D1. Marks go on the Perfect Fit inner sleeve, double-sleeved — Adopted
 * **Decision:** Paint the inner sleeve on the card-face side, let it dry fully,
   then put it in an outer sleeve. The card itself is never marked.
-* **Why:** Same as PRISM. The outer sleeve protects the paint, and cards keep
-  their value, which matters for signed and old cards.
+* **Why:** Standard double-sleeving. The outer sleeve protects the paint, and
+  cards keep their value, which matters for signed and old cards.
 * **Limits:** Every deck that shares a copy must use **the same outer sleeve**.
   Otherwise a shared card stands out when it moves into another deck. Edgemark
   doesn't model or enforce sleeve type.
@@ -29,9 +30,11 @@ built), **Open** (needs a decision).
 * **Decision:** Each deck owns one slot. Slots 1–24 are on side A (card
   face), 25–48 on side B (card back). Slot 1 is at the starting corner chosen in
   Settings (top-left or top-right).
-* **Why:** Matches PRISM's 48-slot layout and fits a 64 mm sleeve at a
-  2.6 mm pitch with a 1.5 mm window, readable with a fine paint pen.
-* **PRISM:** 48 decks per PRISM, 96 with dot splits.
+* **Why:** 24 positions fit a 64 mm sleeve at a 2.6 mm pitch with a 1.5 mm
+  window, readable with a fine paint pen. Two sides give 48.
+* **Other approaches:** A single colour dot per deck (fine for a handful of
+  decks), coloured stickers, or a different sleeve colour per shared card.
+  Position-based slots scale further than colour alone.
 * **Limits:**
   * Hard cap of `2 × slots_per_side` decks per database. A big cube import can
     use up slots fast (one per tag).
@@ -54,9 +57,9 @@ built), **Open** (needs a decision).
   that makes a box easier to scan.
 * **Why:** Pen sets have about 12–24 usable colours, far fewer than 48 decks.
   Relying on position is robust and colour-blind friendly.
-* **PRISM:** Defaults to colours found in standard paint pen sets, and advises
-  avoiding metallic colours (they rub onto outer sleeves) and black (invisible
-  on most card backs).
+* **Practical notes:** Stick to colours found in standard paint pen sets.
+  Avoid metallic colours (they can rub onto outer sleeves) and black
+  (invisible on most card backs).
 * **Limits:** Two decks can share a colour, so you must read the position.
 * **To change:** `settings.pens` holds the palette. A "colour-unique" mode could
   refuse duplicate colours when the palette allows it.
@@ -67,9 +70,9 @@ built), **Open** (needs a decision).
   lower half of the same window, coloured by variant. Max 8 variants.
 * **Why:** Uses no extra slots, works with the 24-window guide as printed,
   and reads at a glance: "stripe + yellow dot = Fling build."
-* **PRISM:** Two methods: **Stripes** (side B marks on the opposite edge, 2–8
-  variants) and **Dots** (coloured dots beside the side A stripe, exactly 2
-  variants).
+* **Alternatives considered:** A second stripe per variant on side B (clear
+  to read, but spends slots), or a dot beside the stripe rather than under it
+  (only fits about two variants).
 * **Limits:** Variant identity depends on dot colour alone, and the dot shares
   window space with the stripe (needs a fine tip). No side-B stripe option.
 * **To change:** Mark shapes come from one place:
@@ -83,9 +86,9 @@ built), **Open** (needs a decision).
 * **Decision:** A base with a sleeve pocket and top stop, plus a window plate
   located by two pegs and held by optional 6×2 mm magnets. Long windows at
   4/8/12/16/20/24, round markers at slots 1 and 13, engraved numbers.
-* **Why:** Open-source take on PRISM's Spirit Guide (an alignment tool
-  with magnetic hold for one-handed marking). Original geometry, no PRISM
-  branding.
+* **Why:** A jig makes every mark land in the same place on every sleeve,
+  and the magnetic hold lets you mark one-handed. The geometry is original and
+  fully parametric.
 * **Limits:** Sized for 64 mm Perfect Fit inners. One plate per starting corner.
 * **To change:** All dimensions are parameters at the top of
   `guide/edgemark_guide.scad`.
@@ -99,12 +102,10 @@ built), **Open** (needs a decision).
   a card carries the stripe of every deck that runs at least *i* copies
   (quantity tiers). A pool needs `max(qty)` copies. A **dedicated** deck is a
   pool of one.
-* **Why:** PRISM assumes one Commander table, so everything shares. A whole
-  collection includes decks you play side by side (two Old School decks at an
+* **Why:** Commander-focused setups usually assume one table, so every deck
+  shares with every other. A whole collection includes decks you play side by side (two Old School decks at an
   event, a cube while a constructed deck is built), signed decks that must keep
   specific copies, and different formats.
-* **PRISM:** One shared pool per PRISM, with an optional dedicated commander
-  copy. Separate collections need separate PRISMs.
 * **Limits:**
   * Pools are all-or-nothing: two decks in a pool always share, decks in
     different pools never do. You can't say "A shares with B and B with C,
@@ -123,8 +124,8 @@ built), **Open** (needs a decision).
   `diff(painted, desired)`, matched greedily by largest overlap, so a list
   change produces the fewest add/clear marks rather than a repaint.
 * **Why:** This makes re-syncing, swaps, deleted decks and "marks to clear"
-  fall out of one mechanism, instead of PRISM-style special cases (a separate
-  Marks to Clear list that "cannot be rebuilt").
+  fall out of one mechanism, instead of special cases such as a separate
+  marks-to-clear list that can't be rebuilt.
 * **Limits:** Sleeves of one card are interchangeable. Edgemark doesn't know
   *which* physical sleeve is which, only how many carry each mark set. The
   greedy matcher is near-optimal, not proven minimal.
@@ -162,15 +163,11 @@ built), **Open** (needs a decision).
 * **Decision:** A token has a front, an optional back, a quantity and a set of
   decks. It counts for every variant of those decks. A double-sided token is one
   physical card that carries the marks of every deck needing either side.
-* **PRISM:** Same idea: tokens keep their deck selection until changed, and a
-  double-sided token gets every needing deck's mark.
 
 ### D12. Cube tags become decks in one pool — Adopted
 * **Decision:** Each ticked CubeCobra tag becomes a deck (with its own slot) in
   pool `Cube: <name>`, plus an optional "other" deck for untagged cards, or the
   whole cube as one deck.
-* **PRISM:** Each ticked tag becomes a deck with its own stripe, in a *new*
-  PRISM.
 * **Limits:** Uses one slot per tag (see D2). No re-sync for cubes yet.
 * **To change:** Store `source='cubecobra'` with the tag list, and add a sync
   path like Archidekt's. Per-pool slots (D2) would remove the slot pressure.
@@ -185,8 +182,9 @@ built), **Open** (needs a decision).
 * **Why:** Runs anywhere Docker runs (home server, AWS), backups are one file,
   and anyone can read and change it. The server also has to fetch from Archidekt
   and CubeCobra, which browsers can't do directly (CORS).
-* **PRISM:** Local-first in the browser, works without an account, cloud
-  sync for members, JSON export any time.
+* **Alternative:** A local-first browser app (data in the browser, optional
+  cloud sync). It's simpler to host, but can't call deck sites' APIs, and data
+  is tied to one browser.
 * **Limits:** One collection per instance. No offline/phone-only use without
   reaching the server. SQLite is fine for one person, not for many
   concurrent users.
@@ -218,7 +216,6 @@ built), **Open** (needs a decision).
   tested) plus a fetch wrapper in `main.py`. Archidekt and CubeCobra APIs are
   undocumented, so parsers accept several shapes, and every import has a
   paste/CSV fallback.
-* **PRISM:** Imports Moxfield or Archidekt URLs, or manual entry.
 * **To change (Proposed):** Formalise an `Importer` interface
   (`match(url) -> bool`, `fetch(ref) -> {name, format, cards}`) and a registry,
   so Moxfield, Deckstats or TappedOut are one file each. Note Moxfield blocks
@@ -249,18 +246,19 @@ built), **Open** (needs a decision).
 
 ## 4. Open questions
 
-* **O1. Tournament use.** PRISM's FAQ says sleeve-edge marks are tournament
-  legal under MTR 3.12, on the basis that they add no thickness and can't be
-  identified without seeing the card's face. Our variant dots sit lower on the
-  sleeve and might be more visible from the back. Before recommending Edgemark
+* **O1. Tournament use.** Thin paint on the card-face side of an inner sleeve
+  adds no thickness and isn't visible from the back. Players report judges
+  accepting it for sideboard and cube marks, but it's the head judge's call
+  under the Magic Tournament Rules on marked cards. Our variant dots sit lower
+  on the sleeve and might be more visible. Before recommending Edgemark
   for sanctioned play, test it with a judge.
-* **O2. Reordering slots.** PRISM lets you move a deck to another slot
-  (and reorder several at once, e.g. by colour identity). Edgemark lets you
+* **O2. Reordering slots.** Grouping slots by colour identity or putting
+  most-played decks in the easiest-to-see slots is handy. Edgemark lets you
   change a slot in Edit, but every painted mark for that deck then shows as
   clear-and-repaint. Should "move slot" be a planned migration with its own
   work list?
-* **O3. Change history.** PRISM's "Track Changes" shows what changed when a deck
-  is added. Edgemark shows only the current diff. Do we want a timeline (the `log`
+* **O3. Change history.** Edgemark shows only the current diff, not what changed
+  over time. Do we want a timeline (the `log`
   table exists but isn't shown)?
-* **O4. Spare copies.** PRISM's FAQ suggests selling copies that sharing frees
-  up. Edgemark's Collection tab knows `owned − need`. Add a "spares" view?
+* **O4. Spare copies.** Sharing frees up duplicates that can be traded or
+  sold. Edgemark's Collection tab knows `owned − need`. Add a "spares" view?

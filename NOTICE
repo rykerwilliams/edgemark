@@ -14,7 +14,7 @@ Printable marking guide (guide/: .scad, .stl and generator)
   See guide/LICENSE. Attribution: "Edgemark marking guide by rykerwilliams,
   https://github.com/rykerwilliams/edgemark". Remixes must use the same license.
 
-Not affiliated with PRISM (prismmtg.com), whose sleeve-marking method
-inspired this project. Edgemark's code and guide geometry are original work.
+Edgemark's code and guide geometry are original work. Marking sleeves to
+share cards between decks is a long-standing player practice.
 Magic: The Gathering is a trademark of Wizards of the Coast LLC. Edgemark is
 unofficial fan-made software and is not approved or endorsed by Wizards.

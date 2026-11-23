@@ -30,7 +30,9 @@ when lists change, and what to buy.
 docker compose up -d --build      # http://<host>:8080
 ```
 
-Data lives in `./data/edgemark.db` (SQLite). Back it up by copying that file or
+Data lives in `./data/edgemark.db` (SQLite). The container gives that folder
+to user 10001 when it starts. Set `PUID`/`PGID` (see `docker-compose.yml`) to
+make the files belong to your own user instead. Back it up by copying that file or
 using **Settings → Download backup**.
 
 To expose it beyond your LAN, set `EDGEMARK_AUTH=user:password` (HTTP basic
@@ -41,7 +43,7 @@ on ECS/Fargate, App Runner or a small EC2 box. Mount persistent storage
 Or run the published image instead of building:
 
 ```bash
-docker run -d -p 8080:8080 -v $PWD/data:/data ghcr.io/rykerwilliams/edgemark:latest
+docker run -d -p 8080:8080 -v $PWD/data:/data -e PUID=$(id -u) -e PGID=$(id -g) ghcr.io/rykerwilliams/edgemark:latest
 ```
 
 Without Docker:

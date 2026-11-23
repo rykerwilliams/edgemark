@@ -230,6 +230,21 @@ built), **Open** (needs a decision).
   Tailscale, an ALB with OIDC) rather than building accounts in. If multi-user
   lands (D13), read the user from a trusted proxy header.
 
+### D17. Container starts as root, fixes /data ownership, then drops root — Adopted
+* **Decision:** `entrypoint.py` runs as root just long enough to give the data
+  folder to `PUID:PGID` (default 10001), then runs the server as that user.
+  With `docker run --user`, it only checks the folder is writable and explains
+  the fix if not.
+* **Why:** Docker creates bind-mounted host folders (`./data`) owned by root,
+  so a container that starts as a non-root user can't create its database.
+  v0 shipped with `USER edgemark` and failed on first run with
+  "unable to open database file".
+* **Limits:** It changes the ownership of files in the mounted folder. Don't
+  mount a folder that other programs need to own.
+* **To change:** For rootless or Kubernetes setups that forbid starting as
+  root, run with `--user` and a pre-owned volume (or an `fsGroup`). The
+  entrypoint supports that path.
+
 ---
 
 ## 4. Open questions

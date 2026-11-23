@@ -8,6 +8,10 @@ services:
     volumes:
       - ./data:/data
     environment:
+      # Owner of the files in ./data. Set to your own `id -u` / `id -g` if you
+      # want to edit or back them up without sudo. Default 10001.
+      # PUID: "1000"
+      # PGID: "1000"
       # Optional basic auth, recommended if it's reachable outside your LAN:
       # EDGEMARK_AUTH: "rajah:change-me"
       EDGEMARK_DB: /data/edgemark.db

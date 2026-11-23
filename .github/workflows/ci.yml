@@ -31,10 +31,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t edgemark:ci .
-      - name: Smoke test
+      - name: Smoke test (bind mount Docker creates as root, like docker compose)
         run: |
-          docker run -d --name em -p 8080:8080 edgemark:ci
-          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/state && break; sleep 1; done
-          curl -fs http://127.0.0.1:8080/ | grep -q Edgemark
+          docker run -d --name em -p 8080:8080 -v "$PWD/smoke-data:/data" edgemark:ci
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/state > /dev/null && break; sleep 1; done
           docker logs em
+          curl -fs -X POST http://127.0.0.1:8080/api/decks -H 'Content-Type: application/json' -d '{"name":"Smoke","decklist":"4 Brainstorm"}'
+          docker restart em
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/state > /dev/null && break; sleep 1; done
+          curl -fs http://127.0.0.1:8080/api/state | grep -q Smoke   # data survived a restart
+          curl -fs http://127.0.0.1:8080/ | grep -q Edgemark
+          ls -ln smoke-data
           docker rm -f em
+      - name: Smoke test (PUID/PGID)
+        run: |
+          docker run -d --name em2 -e PUID=1234 -e PGID=1234 -v "$PWD/smoke-data2:/data" edgemark:ci
+          sleep 3; docker logs em2
+          test "$(stat -c %u smoke-data2)" = 1234
+          docker exec em2 python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/api/state')"
+          docker rm -f em2

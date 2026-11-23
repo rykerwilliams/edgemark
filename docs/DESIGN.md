@@ -271,7 +271,7 @@ built), **Open** (needs a decision).
   entrypoint supports that path.
 
 ### D19. Primary setup: a sibling service to Spellbook; solo still supported — Proposed
-* **Decision:** The primary setup is Edgemark next to a self-hosted
+* **Decision:** The first-class, primary setup is Edgemark next to a self-hosted
   [Spellbook](https://github.com/KyleDerZweite/spellbook) instance, which
   becomes its source of owned printings and decklists. Running Edgemark on its
   own stays a supported setup. Edgemark runs as its own container

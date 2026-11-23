@@ -1,0 +1,13 @@
+services:
+  edgemark:
+    build: .
+    image: edgemark:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      # Optional basic auth, recommended if it's reachable outside your LAN:
+      # EDGEMARK_AUTH: "rajah:change-me"
+      EDGEMARK_DB: /data/edgemark.db

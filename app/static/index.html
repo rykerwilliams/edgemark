@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edgemark</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true"></span>Edgemark</div>
+  <nav class="tabs scroll" id="tabs">
+    <a href="#mark">Mark sleeves</a><a href="#decks">Decks</a><a href="#collection">Collection</a>
+    <a href="#swaps">Swaps</a><a href="#slots">Slots</a><a href="#settings">Settings</a><a href="#guide">Guide</a>
+  </nav>
+</header>
+
+<main>
+<!-- MARK -->
+<section id="v-mark" class="view">
+  <div class="headrow">
+    <div>
+      <h1 id="m-title">Mark sleeves</h1>
+      <p class="sub" id="m-sub"></p>
+    </div>
+    <div class="meter"><div class="meter-fill" id="m-meter"></div></div>
+  </div>
+  <div class="stats" id="m-stats"></div>
+  <div class="filters">
+    <input id="m-q" type="search" placeholder="Search cards" aria-label="Search cards">
+    <select id="m-view" aria-label="View">
+      <option value="undone">Work to do</option><option value="all">All cards</option>
+      <option value="pool">Shared copies only</option><option value="clear">Marks to clear</option>
+      <option value="buy">Copies to buy</option>
+    </select>
+    <select id="m-deck" aria-label="One mark at a time"><option value="">All decks</option></select>
+    <select id="m-pool" aria-label="Pool"><option value="">All pools</option></select>
+  </div>
+  <div class="bulk">
+    <button id="m-all">Mark all shown as done</button>
+    <button id="m-copy" class="ghost">Copy work list</button>
+    <button id="m-print" class="ghost">Print guide</button>
+    <span id="m-hint" class="hint"></span>
+  </div>
+  <div id="m-list" class="list"></div>
+</section>
+
+<!-- DECKS -->
+<section id="v-decks" class="view">
+  <div class="headrow"><div><h1>Decks</h1><p class="sub">Each deck owns one slot and one pen colour. Decks in the same pool share copies.</p></div>
+    <button id="d-add">Add decks</button></div>
+  <div id="d-list" class="decks"></div>
+  <div class="headrow" style="margin-top:36px"><div><h2 style="margin:0">Tokens and extras</h2><p class="sub">Cards no decklist names (tokens, emblems, dungeons, helpers) that should still carry deck marks. A double-sided token gets the marks of every deck that needs either side.</p></div>
+    <button id="t-add" class="ghost">Add token</button></div>
+  <div id="t-list" class="list"></div>
+</section>
+
+<!-- COLLECTION -->
+<section id="v-collection" class="view">
+  <div class="headrow"><div><h1>Collection</h1><p class="sub">How many you own, where the spares live, and what to buy.</p></div>
+    <button id="c-import">Import collection</button></div>
+  <div class="filters">
+    <input id="c-q" type="search" placeholder="Search cards" aria-label="Search collection">
+    <select id="c-loc" aria-label="Location"><option value="">All locations</option></select>
+    <label class="chk"><input type="checkbox" id="c-short"> Short only</label>
+    <button id="c-buy" class="ghost">Copy buy list</button>
+  </div>
+  <div class="scroll"><table class="tbl stack" id="c-table">
+    <thead><tr><th>Card</th><th class="num">Need</th><th class="num">Owned</th><th class="num">Short</th><th>Location</th><th>Decks</th></tr></thead>
+    <tbody></tbody></table></div>
+</section>
+
+<!-- SWAPS -->
+<section id="v-swaps" class="view">
+  <div class="headrow"><div><h1>Swap planner</h1><p class="sub">See which marks to add and clear before you change a list.</p></div></div>
+  <form id="s-form" class="swapform">
+    <label>Deck<select id="s-deck" required></select></label>
+    <label id="s-var-l" hidden>Variant<select id="s-var"></select></label>
+    <label>Card out<input id="s-out" list="s-out-list" placeholder="(none)"><datalist id="s-out-list"></datalist></label>
+    <label>Card in<input id="s-in" list="all-cards" placeholder="(none)"></label>
+    <label class="qty">Copies<input id="s-qty" type="number" min="1" value="1" inputmode="numeric"></label>
+    <div class="row"><button type="submit">Preview</button><button type="button" id="s-queue" class="ghost">Add to queue</button></div>
+  </form>
+  <div id="s-preview"></div>
+  <h2>Queue</h2>
+  <div id="s-queue-list" class="list"></div>
+</section>
+
+<!-- SLOTS -->
+<section id="v-slots" class="view">
+  <div class="headrow"><div><h1>Slot map</h1><p class="sub" id="sl-sub"></p></div></div>
+  <div class="sleevebig" id="sl-map"></div>
+  <h2>Deck overlap</h2>
+  <p class="sub">Cards each pair of decks has in common. Higher numbers mean more sharing.</p>
+  <div class="scroll" id="sl-overlap"></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="v-settings" class="view">
+  <h1>Settings</h1>
+  <form id="st-form" class="settings">
+    <label>Starting corner for slot 1
+      <select id="st-corner"><option value="top-left">Top left (count rightward)</option><option value="top-right">Top right (count leftward)</option></select>
+      <small>Pick this before you paint anything. Changing it later moves every slot.</small></label>
+    <label>Slots per side<input id="st-spp" type="number" min="8" max="40" inputmode="numeric">
+      <small>24 matches the printed guide (2.6 mm pitch). Side B is the back face.</small></label>
+    <label class="chk"><input type="checkbox" id="st-basics"> Don't mark basic lands</label>
+    <label>Locations (one per line)<textarea id="st-locs" rows="4"></textarea></label>
+    <label>Pen colours<div id="st-pens" class="pens"></div><small>Click to edit. New decks take the next colour.</small></label>
+    <button type="submit">Save settings</button>
+  </form>
+  <h2>Backup</h2>
+  <div class="row wrap">
+    <a class="btn ghost" href="/api/backup">Download backup (.json)</a>
+    <a class="btn ghost" href="/api/export.csv">Download CSV</a>
+    <label class="btn ghost file">Restore backup<input type="file" id="st-restore" accept=".json"></label>
+  </div>
+</section>
+
+<!-- GUIDE -->
+<section id="v-guide" class="view prose">
+  <h1>How Edgemark works</h1>
+  <p>Every deck gets a <b>slot</b> (a fixed position along the top edge of the inner sleeve) and a <b>pen colour</b>. A card's sleeve carries one mark for each deck that uses that copy, so you can fan a box and see which decks a card belongs to.</p>
+  <h2>Pools</h2>
+  <p>Decks in the same pool share copies because you never sleeve two of them at once, for example your Old School decks. Copy 1 carries the marks of every deck in the pool that runs the card, copy 2 the decks that run two or more, and so on. A pool therefore needs as many copies as its hungriest deck. Decks in different pools, or decks set to <b>dedicated</b> (signed decks, a cube, anything that stays built), get copies of their own.</p>
+  <h2>Marking a card</h2>
+  <ol>
+    <li>Choose your starting corner and finish your lists before you paint.</li>
+    <li>Slide the Perfect Fit inner into the printed guide, card face up, top edge against the stop.</li>
+    <li>Paint each slot listed for the card through its window: the stripe at the very top edge, any variant dot in the lower half of the window. The long windows are slots 4, 8, 12, 16, 20 and 24, and the notch marks slot 1. For side B (slots 25 to 48), flip the sleeve and count the same way.</li>
+    <li>Let it dry fully (touch-dry isn't sleeve-ready), outer-sleeve it, then tick it off here.</li>
+  </ol>
+  <h2>Variants</h2>
+  <p>When one deck has several builds (say an Atog list with a Fling package and one without), split it into <b>variants</b> instead of spending more slots. The deck keeps one slot. A card that every variant plays gets just the stripe at the top of the window. A card only some variants play also gets a <b>dot</b> in the lower half of the same window, in that variant's colour. When you build a variant, pull cards with the bare stripe plus that variant's dot.</p>
+  <h2>Tokens and cubes</h2>
+  <p>Tokens, emblems and other extras no decklist names go under <b>Decks → Tokens and extras</b>, with the decks that use them. A <b>CubeCobra</b> import turns each tag you tick into its own deck in one pool, so a card with two tags carries both marks and the cube needs just one copy of it.</p>
+  <h2>Changing lists</h2>
+  <p>Re-sync an Archidekt deck, edit a pasted list, or plan it in <b>Swaps</b>. Edgemark compares what's painted with what's needed and shows the smallest set of marks to add or clear. When a deck is deleted, its paint stays on the sleeves until you clear it, so those marks show up under <b>Marks to clear</b>.</p>
+  <p>Swaps applied here change only Edgemark's copy. Make the same edit on Archidekt, or the next sync will undo it.</p>
+</section>
+</main>
+
+<!-- dialogs -->
+<dialog id="dlg-add">
+  <form method="dialog" id="add-form">
+    <h2>Add decks</h2>
+    <div class="seg" role="tablist">
+      <button type="button" data-mode="arch" class="on">Archidekt</button>
+      <button type="button" data-mode="paste">Paste or upload</button>
+      <button type="button" data-mode="cube">CubeCobra</button>
+    </div>
+    <div data-pane="arch">
+      <label>Deck links or ids (one per line)<textarea id="a-links" rows="4" placeholder="https://archidekt.com/decks/123456/my-deck"></textarea></label>
+      <div class="row"><input id="a-user" placeholder="Archidekt username" aria-label="Archidekt username"><button type="button" id="a-find" class="ghost">List decks</button></div>
+      <div id="a-userdecks" class="checks"></div>
+    </div>
+    <div data-pane="paste" hidden>
+      <label>Deck name<input id="p-name"></label>
+      <label>Decklist<textarea id="p-text" rows="8" placeholder="4 Brainstorm&#10;1 Ancestral Recall&#10;&#10;Sideboard&#10;2 Pyroblast"></textarea></label>
+      <label class="btn ghost file">Upload .txt / .dec / .dek / .mwDeck<input type="file" id="p-file" accept=".txt,.dec,.dek,.mwDeck,.csv"></label>
+    </div>
+    <div data-pane="cube" hidden>
+      <label>Cube link or id<input id="cb-ref" placeholder="https://cubecobra.com/cube/list/your-cube"></label>
+      <details><summary>Or paste the cube's CSV export</summary><textarea id="cb-csv" rows="5" placeholder="name,CMC,Type,...,tags"></textarea></details>
+      <div class="row"><input id="cb-name" placeholder="Cube name (optional)" aria-label="Cube name"><button type="button" id="cb-load" class="ghost">Load tags</button></div>
+      <p class="meta" id="cb-info"></p>
+      <div id="cb-tags" class="checks"></div>
+      <label class="chk"><input type="checkbox" id="cb-untagged" checked> Make one more deck for cards with none of the ticked tags</label>
+      <label class="chk"><input type="checkbox" id="cb-whole"> Whole cube as one deck (ignore tags)</label>
+      <small>Each ticked tag becomes a deck with its own slot, all in one pool, so a card with two tags gets both marks. Leave Pool as "Main" to use a pool named after the cube.</small>
+    </div>
+    <div class="grid2">
+      <label>Pool<input id="a-pool" list="pools" value="Main"></label>
+      <label>Format<input id="a-format" placeholder="from source"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="a-ded"> Dedicated copies (no sharing)</label>
+    <p class="err" id="a-err"></p>
+    <div class="row end"><button value="cancel" class="ghost">Cancel</button><button type="button" id="a-go">Add</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-deck">
+  <form method="dialog" id="deck-form">
+    <h2 id="e-title">Edit deck</h2>
+    <label>Name<input id="e-name"></label>
+    <div class="grid2">
+      <label>Pool<input id="e-pool" list="pools"></label>
+      <label>Format<input id="e-format"></label>
+      <label>Slot<select id="e-slot"></select></label>
+      <label>Colour<input id="e-color" type="color"></label>
+    </div>
+    <div class="row wrap">
+      <label class="chk"><input type="checkbox" id="e-ded"> Dedicated copies</label>
+      <label class="chk"><input type="checkbox" id="e-active"> Active</label>
+      <label class="chk"><input type="checkbox" id="e-side"> Include sideboard</label>
+    </div>
+    <div id="e-vars">
+      <h3>Variants</h3>
+      <small>Builds of this deck that share one slot. Cards in every variant get only the stripe; cards in some variants also get a dot in the lower half of the window, one colour per variant.</small>
+      <div id="e-varlist" class="list"></div>
+      <details id="e-varadd"><summary id="e-varsum">Split into variants</summary>
+        <div class="grid2"><label>New variant name<input id="ev-name" placeholder="e.g. Fling build"></label><label>Dot colour<input id="ev-color" type="color" value="#1e88e5"></label></div>
+        <label>Archidekt link (optional)<input id="ev-arch" placeholder="https://archidekt.com/decks/…"></label>
+        <label>Or paste its full list<textarea id="ev-list" rows="5"></textarea></label>
+        <div class="row end"><button type="button" id="ev-go" class="ghost">Add variant</button></div>
+      </details>
+    </div>
+    <label><span id="e-listlbl">Decklist</span><select id="e-listvar" aria-label="Which variant's list" hidden></select><textarea id="e-list" rows="8"></textarea><small>Edit to replace the list. Archidekt lists are overwritten on the next sync.</small></label>
+    <label>Notes<input id="e-notes"></label>
+    <p class="err" id="e-err"></p>
+    <div class="row end"><button type="button" id="e-del" class="danger">Delete deck</button><span class="grow"></span><button value="cancel" class="ghost">Cancel</button><button type="button" id="e-save">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-coll">
+  <form method="dialog">
+    <h2>Import collection</h2>
+    <label>Paste a list ("4 Brainstorm") or a CSV with Quantity and Name columns<textarea id="ci-text" rows="8"></textarea></label>
+    <div class="grid2">
+      <label>Location for these<input id="ci-loc" list="locs"></label>
+      <label>Mode<select id="ci-mode"><option value="set">Set owned to these numbers</option><option value="add">Add to owned</option></select></label>
+    </div>
+    <p class="err" id="ci-err"></p>
+    <div class="row end"><button value="cancel" class="ghost">Cancel</button><button type="button" id="ci-go">Import</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-token">
+  <form method="dialog">
+    <h2 id="tk-title">Add token</h2>
+    <div class="grid2">
+      <label>Front<input id="tk-name" list="all-cards" placeholder="Treasure"></label>
+      <label>Back (double-sided, optional)<input id="tk-back" placeholder="Clue"></label>
+    </div>
+    <label class="qty">Copies each deck needs<input id="tk-qty" type="number" min="1" value="1" inputmode="numeric"></label>
+    <fieldset><legend>Decks that use it</legend><div id="tk-decks" class="checks"></div></fieldset>
+    <p class="err" id="tk-err"></p>
+    <div class="row end"><button type="button" id="tk-del" class="danger" hidden>Delete</button><span class="grow"></span><button value="cancel" class="ghost">Cancel</button><button type="button" id="tk-go">Save</button></div>
+  </form>
+</dialog>
+
+<datalist id="pools"></datalist><datalist id="locs"></datalist><datalist id="all-cards"></datalist>
+<div id="toast" class="toast" role="status" hidden><span></span><button id="toast-undo" class="ghost">Undo</button></div>
+<div id="printout" class="printout"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
